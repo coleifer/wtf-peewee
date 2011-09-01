@@ -51,10 +51,8 @@ class SelectQueryField(SelectFieldBase):
 
     def _get_data(self):
         if self._formdata is not None:
-            for obj in self.query:
-                if obj.id == self._formdata:
-                    self._set_data(obj)
-                    break
+            if self.query.where(id=self._formdata).exists():
+                self._set_data(self.query.get(id=self._formdata))
         return self._data
 
     def _set_data(self, data):
@@ -67,7 +65,7 @@ class SelectQueryField(SelectFieldBase):
         if self.allow_blank:
             yield (u'__None', self.blank_text, self.data is None)
 
-        for obj in self.query:
+        for obj in self.query.clone():
             yield (obj.id, self.get_label(obj), obj == self.data)
 
     def process_formdata(self, valuelist):
@@ -80,10 +78,7 @@ class SelectQueryField(SelectFieldBase):
 
     def pre_validate(self, form):
         if not self.allow_blank or self.data is not None:
-            for obj in self.query:
-                if self.data == obj:
-                    break
-            else:
+            if not self.query.where(id=self.data.id).exists():
                 raise ValidationError(self.gettext('Not a valid choice'))
 
 

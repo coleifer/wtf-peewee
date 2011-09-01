@@ -5,6 +5,9 @@ between peewee models and wtforms, mapping model fields to form fields.
 
 ## example usage:
 
+first, create a couple basic models and then use the model_form class factory
+to create a form for the Entry model:
+
     from peewee import *
     from wtfpeewee.orm import model_form
 
@@ -24,3 +27,37 @@ between peewee models and wtforms, mapping model fields to form fields.
 
     # create a form class for use with the Entry model
     EntryForm = model_form(Entry)
+
+Example implementation for an "edit" view using Flask:
+
+    @app.route('/entries/<int:entry_id>/', methods=['GET', 'POST'])
+    def edit_entry(entry_id):
+        try:
+            entry = Entry.get(id=entry_id)
+        except Entry.DoesNotExist:
+            abort(404)
+        
+        if request.method == 'POST':
+            form = EntryForm(request.form, obj=entry)
+            if form.validate():
+                form.populate_obj(entry)
+                entry.save()
+                flash('Your entry has been saved')
+        else:
+            form = EntryForm(obj=entry)
+        
+        return render_template('blog/entry_edit.html', form=form, entry=entry)
+
+Example template for above view:
+
+    {% extends "layout.html" %}
+    {% block body %}
+      <h2>Edit {{ entry.title }}</h2>
+
+      <form method="post" action="">
+        {% for field in form %}
+          <p>{{ field.label }} {{ field }}</p>
+        {% endfor %}
+        <p><button type="submit">Submit</button></p>
+      </form>
+    {% endblock %}
