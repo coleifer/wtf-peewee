@@ -40,6 +40,7 @@ class SelectQueryField(SelectFieldBase):
         self.allow_blank = allow_blank
         self.blank_text = blank_text
         self.query = query
+        self.model = query.model
         self._set_data(None)
 
         if get_label is None:
@@ -51,8 +52,12 @@ class SelectQueryField(SelectFieldBase):
 
     def _get_data(self):
         if self._formdata is not None:
-            if self.query.where(id=self._formdata).exists():
-                self._set_data(self.query.get(id=self._formdata))
+            try:
+                self._set_data(self.query.get(**{
+                    self.model._meta.pk_name: self._formdata
+                }))
+            except self.query.model.DoesNotExist:
+                pass
         return self._data
 
     def _set_data(self, data):
@@ -66,7 +71,7 @@ class SelectQueryField(SelectFieldBase):
             yield (u'__None', self.blank_text, self.data is None)
 
         for obj in self.query.clone():
-            yield (obj.id, self.get_label(obj), obj == self.data)
+            yield (obj.get_pk(), self.get_label(obj), obj == self.data)
 
     def process_formdata(self, valuelist):
         if valuelist:
@@ -78,7 +83,7 @@ class SelectQueryField(SelectFieldBase):
 
     def pre_validate(self, form):
         if not self.allow_blank or self.data is not None:
-            if not self.query.where(id=self.data.id).exists():
+            if not self.query.where(**{self.model._meta.pk_name: self.data.get_pk()}).exists():
                 raise ValidationError(self.gettext('Not a valid choice'))
 
 
