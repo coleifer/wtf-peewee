@@ -182,6 +182,14 @@ class WTFPeeweeTestCase(unittest.TestCase):
         
         # pull from the db just to be 100% sure
         a1 = Entry.get(title='a1 edited')
+        
+        form = EntryForm(FakePost({
+            'title': 'new',
+            'content': 'blah',
+            'pub_date': '2011-01-01 00:00:00',
+            'blog': 10000
+        }))
+        self.assertFalse(form.validate())
     
     def test_form_with_only_exclude(self):
         frm = model_form(Entry, only=('title', 'content',))()

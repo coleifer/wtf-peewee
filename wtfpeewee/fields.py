@@ -82,9 +82,11 @@ class SelectQueryField(SelectFieldBase):
                 self._formdata = int(valuelist[0])
 
     def pre_validate(self, form):
-        if not self.allow_blank or self.data is not None:
+        if self.data is not None:
             if not self.query.where(**{self.model._meta.pk_name: self.data.get_pk()}).exists():
                 raise ValidationError(self.gettext('Not a valid choice'))
+        elif not self.allow_blank:
+            raise ValidationError(self.gettext('Selection cannot be blank'))
 
 
 class ModelSelectField(SelectQueryField):
