@@ -43,6 +43,7 @@ class ModelConverter(object):
             validators=[],
             filters=[],
             default=field.default,
+            description=field.help_text,
         )
         if field_args:
             kwargs.update(field_args)
