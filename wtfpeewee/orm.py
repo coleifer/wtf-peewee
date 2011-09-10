@@ -49,6 +49,8 @@ class ModelConverter(object):
         
         if field.null:
             kwargs['validators'].append(validators.Optional())
+        else:
+            kwargs['validators'].append(validators.Required())
         
         field_class = type(field)
         
