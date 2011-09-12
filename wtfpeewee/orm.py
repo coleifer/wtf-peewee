@@ -26,7 +26,7 @@ class ModelConverter(object):
         CharField: f.TextField,
         TextField: f.TextAreaField,
     }
-    required = (DateTimeField, CharField, TextField,)
+    required = (DateTimeField, CharField, TextField, ForeignKeyField,)
     
     def __init__(self, additional=None):
         self.converters = {
