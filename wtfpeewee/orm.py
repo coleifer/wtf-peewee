@@ -26,6 +26,7 @@ class ModelConverter(object):
         CharField: f.TextField,
         TextField: f.TextAreaField,
     }
+    required = (DateTimeField, CharField, TextField,)
     
     def __init__(self, additional=None):
         self.converters = {
@@ -51,7 +52,8 @@ class ModelConverter(object):
         if field.null:
             kwargs['validators'].append(validators.Optional())
         else:
-            kwargs['validators'].append(validators.Required())
+            if isinstance(field, self.required):
+                kwargs['validators'].append(validators.Required())
         
         field_class = type(field)
         
