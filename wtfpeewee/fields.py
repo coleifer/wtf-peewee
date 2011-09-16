@@ -50,14 +50,17 @@ class SelectQueryField(SelectFieldBase):
         else:
             self.get_label = get_label
 
+    def get_model(self, pk):
+        try:
+            return self.query.get(**{
+                self.model._meta.pk_name: pk
+            })
+        except self.query.model.DoesNotExist:
+            pass
+
     def _get_data(self):
         if self._formdata is not None:
-            try:
-                self._set_data(self.query.get(**{
-                    self.model._meta.pk_name: self._formdata
-                }))
-            except self.query.model.DoesNotExist:
-                pass
+            self._set_data(self.get_model(self._formdata))
         return self._data
 
     def _set_data(self, data):
@@ -65,11 +68,16 @@ class SelectQueryField(SelectFieldBase):
         self._formdata = None
 
     data = property(_get_data, _set_data)
+    
+    def __call__(self, **kwargs):
+        if 'value' in kwargs:
+            self._set_data(self.get_model(kwargs['value']))
+        return self.widget(self, **kwargs)
 
     def iter_choices(self):
         if self.allow_blank:
             yield (u'__None', self.blank_text, self.data is None)
-
+        
         for obj in self.query.clone():
             yield (obj.get_pk(), self.get_label(obj), obj == self.data)
 
