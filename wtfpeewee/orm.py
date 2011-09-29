@@ -20,7 +20,7 @@ class ModelConverter(object):
     defaults = {
         PrimaryKeyField: f.HiddenField,
         IntegerField: f.IntegerField,
-        FloatField: f.DecimalField,
+        FloatField: f.FloatField,
         DateTimeField: f.DateTimeField,
         BooleanField: f.BooleanField,
         CharField: f.TextField,
