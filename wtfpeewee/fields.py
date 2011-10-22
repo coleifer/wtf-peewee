@@ -97,6 +97,51 @@ class SelectQueryField(SelectFieldBase):
             raise ValidationError(self.gettext('Selection cannot be blank'))
 
 
+class SelectMultipleQueryField(SelectQueryField):
+    widget = widgets.Select(multiple=True)
+    
+    def __init__(self, *args, **kwargs):
+        kwargs.pop('allow_blank', None)
+        super(SelectMultipleQueryField, self).__init__(*args, **kwargs)
+    
+    def get_model_list(self, pk_list):
+        return list(self.query.where(**{
+            '%s__in' % self.model._meta.pk_name: pk_list
+        }))
+    
+    def _get_data(self):
+        if self._formdata is not None:
+            self._set_data(self.get_model_list(self._formdata))
+        return self._data or []
+
+    def _set_data(self, data):
+        self._data = data
+        self._formdata = None
+
+    data = property(_get_data, _set_data)
+    
+    def __call__(self, **kwargs):
+        if 'value' in kwargs:
+            self._set_data(self.get_model_list(kwargs['value']))
+        return self.widget(self, **kwargs)
+
+    def iter_choices(self):
+        for obj in self.query.clone():
+            yield (obj.get_pk(), self.get_label(obj), obj in self.data)
+
+    def process_formdata(self, valuelist):
+        if valuelist:
+            self._data = []
+            self._formdata = map(int, valuelist)
+
+    def pre_validate(self, form):
+        if self.data:
+            if not self.query.where(**{'%s__in' % self.model._meta.pk_name: [
+                model.get_pk() for model in self.data
+            ]}).count() == len(self.data):
+                raise ValidationError(self.gettext('Not a valid choice'))
+
+
 class ModelSelectField(SelectQueryField):
     """
     Like a SelectQueryField, except takes a model class instead of a
@@ -104,3 +149,12 @@ class ModelSelectField(SelectQueryField):
     """
     def __init__(self, label=None, validators=None, model=None, **kwargs):
         super(ModelSelectField, self).__init__(label, validators, query=model.select(), **kwargs)
+
+
+class ModelSelectMultipleField(SelectQueryField):
+    """
+    Like a SelectMultipleQueryField, except takes a model class instead of a
+    queryset and lists everything in it.
+    """
+    def __init__(self, label=None, validators=None, model=None, **kwargs):
+        super(ModelSelectMultipleField, self).__init__(label, validators, query=model.select(), **kwargs)

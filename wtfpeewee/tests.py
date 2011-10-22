@@ -3,7 +3,8 @@ import unittest
 
 from peewee import *
 from wtforms import fields as wtfields
-from wtfpeewee.fields import SelectQueryField, ModelSelectField
+from wtforms.form import Form as WTForm
+from wtfpeewee.fields import SelectQueryField, SelectMultipleQueryField, ModelSelectField
 from wtfpeewee.orm import model_form
 
 
@@ -36,7 +37,10 @@ EntryForm = model_form(Entry)
 
 class FakePost(dict):
     def getlist(self, key):
-        return [self[key]]
+        val = self[key]
+        if isinstance(val, list):
+            return val
+        return [val]
 
 
 class WTFPeeweeTestCase(unittest.TestCase):
@@ -197,3 +201,33 @@ class WTFPeeweeTestCase(unittest.TestCase):
         
         frm = model_form(Entry, exclude=('title', 'content',))()
         self.assertEqual(sorted(frm._fields.keys()), ['blog', 'pub_date'])
+    
+    def test_form_multiple(self):
+        class TestForm(WTForm):
+            blog = SelectMultipleQueryField(query=Blog.select())
+        
+        frm = TestForm()
+        self.assertEqual([x for x in frm.blog.iter_choices()], [
+            (self.blog_a.id, 'a', False),
+            (self.blog_b.id, 'b', False),
+        ])
+        
+        frm = TestForm(FakePost({'blog': [self.blog_b.id]}))
+        self.assertEqual([x for x in frm.blog.iter_choices()], [
+            (self.blog_a.id, 'a', False),
+            (self.blog_b.id, 'b', True),
+        ])
+        self.assertEqual(frm.blog.data, [self.blog_b])
+        self.assertTrue(frm.validate())
+        
+        frm = TestForm(FakePost({'blog': [self.blog_b.id, self.blog_a.id]}))
+        self.assertEqual([x for x in frm.blog.iter_choices()], [
+            (self.blog_a.id, 'a', True),
+            (self.blog_b.id, 'b', True),
+        ])
+        self.assertEqual(frm.blog.data, [self.blog_a, self.blog_b])
+        self.assertTrue(frm.validate())
+        
+        bad_id = [x for x in range(1,4) if x not in [self.blog_a.id, self.blog_b.id]][0]
+        frm = TestForm(FakePost({'blog': [self.blog_b.id, bad_id]}))
+        self.assertTrue(frm.validate())
