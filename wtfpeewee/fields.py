@@ -151,7 +151,7 @@ class ModelSelectField(SelectQueryField):
         super(ModelSelectField, self).__init__(label, validators, query=model.select(), **kwargs)
 
 
-class ModelSelectMultipleField(SelectQueryField):
+class ModelSelectMultipleField(SelectMultipleQueryField):
     """
     Like a SelectMultipleQueryField, except takes a model class instead of a
     queryset and lists everything in it.
