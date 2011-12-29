@@ -6,12 +6,13 @@ import operator
 import warnings
 
 from wtforms import widgets
-from wtforms.fields import SelectFieldBase
+from wtforms.fields import SelectFieldBase, HiddenField
 from wtforms.validators import ValidationError
 
 
 __all__ = (
-    'ModelSelectField', 'SelectQueryField',
+    'ModelSelectField', 'ModelSelectMultipleField', 'ModelHiddenField',
+    'SelectQueryField', 'SelectMultipleQueryField', 'HiddenQueryField'
 )
 
 
@@ -142,6 +143,53 @@ class SelectMultipleQueryField(SelectQueryField):
                 raise ValidationError(self.gettext('Not a valid choice'))
 
 
+class HiddenQueryField(HiddenField):
+    def __init__(self, label=None, validators=None, query=None, get_label=None, **kwargs):
+        super(HiddenField, self).__init__(label, validators, **kwargs)
+        self.query = query
+        self.model = query.model
+        self._set_data(None)
+
+        if get_label is None:
+            self.get_label = lambda o: unicode(o)
+        elif isinstance(get_label, basestring):
+            self.get_label = operator.attrgetter(get_label)
+        else:
+            self.get_label = get_label
+
+    def get_model(self, pk):
+        try:
+            return self.query.get(**{
+                self.model._meta.pk_name: pk
+            })
+        except self.query.model.DoesNotExist:
+            pass
+
+    def _get_data(self):
+        if self._formdata is not None:
+            self._set_data(self.get_model(self._formdata))
+        return self._data
+
+    def _set_data(self, data):
+        self._data = data
+        self._formdata = None
+
+    data = property(_get_data, _set_data)
+    
+    def __call__(self, **kwargs):
+        if 'value' in kwargs:
+            self._set_data(self.get_model(kwargs['value']))
+        return self.widget(self, **kwargs)
+    
+    def _value(self):
+        return self.data and self.data.get_pk()
+
+    def process_formdata(self, valuelist):
+        if valuelist:
+            self._data = None
+            self._formdata = int(valuelist[0])
+
+
 class ModelSelectField(SelectQueryField):
     """
     Like a SelectQueryField, except takes a model class instead of a
@@ -158,3 +206,11 @@ class ModelSelectMultipleField(SelectMultipleQueryField):
     """
     def __init__(self, label=None, validators=None, model=None, **kwargs):
         super(ModelSelectMultipleField, self).__init__(label, validators, query=model.select(), **kwargs)
+
+class ModelHiddenField(HiddenQueryField):
+    """
+    Like a HiddenQueryField, except takes a model class instead of a
+    queryset and lists everything in it.
+    """
+    def __init__(self, label=None, validators=None, model=None, **kwargs):
+        super(ModelHiddenField, self).__init__(label, validators, query=model.select(), **kwargs)

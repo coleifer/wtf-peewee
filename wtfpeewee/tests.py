@@ -4,7 +4,7 @@ import unittest
 from peewee import *
 from wtforms import fields as wtfields
 from wtforms.form import Form as WTForm
-from wtfpeewee.fields import SelectQueryField, SelectMultipleQueryField, ModelSelectField
+from wtfpeewee.fields import *
 from wtfpeewee.orm import model_form
 
 
@@ -231,3 +231,51 @@ class WTFPeeweeTestCase(unittest.TestCase):
         bad_id = [x for x in range(1,4) if x not in [self.blog_a.id, self.blog_b.id]][0]
         frm = TestForm(FakePost({'blog': [self.blog_b.id, bad_id]}))
         self.assertTrue(frm.validate())
+    
+    def test_hidden_field(self):
+        class TestEntryForm(WTForm):
+            blog = HiddenQueryField(query=Blog.select())
+            title = wtfields.TextField()
+            content = wtfields.TextAreaField()
+        
+        form = TestEntryForm(FakePost({
+            'title': 'new entry',
+            'content': 'some content',
+            'blog': self.blog_b.get_pk(),
+        }))
+        self.assertTrue(form.validate())
+        self.assertEqual(form.blog.data, self.blog_b)
+        
+        entry = Entry()
+        form.populate_obj(entry)
+        
+        # ensure entry count hasn't changed
+        self.assertEqual(Entry.select().count(), 3)
+        
+        entry.save()
+        self.assertEqual(Entry.select().count(), 4)
+        self.assertEqual(self.blog_a.entry_set.count(), 2)
+        self.assertEqual(self.blog_b.entry_set.count(), 2)
+        
+        # make sure the blog object came through ok
+        self.assertEqual(entry.blog, self.blog_b)
+        
+        # edit entry a1
+        form = TestEntryForm(FakePost({
+            'title': 'a1 edited',
+            'content': 'a1 content',
+            'blog': self.blog_b.get_pk(),
+        }), obj=self.entry_a1)
+        
+        self.assertTrue(form.validate())
+        
+        form.populate_obj(self.entry_a1)
+        self.entry_a1.save()
+        
+        self.assertEqual(self.entry_a1.blog, self.blog_b)
+        
+        self.assertEqual(self.blog_a.entry_set.count(), 1)
+        self.assertEqual(self.blog_b.entry_set.count(), 3)
+        
+        # pull from the db just to be 100% sure
+        a1 = Entry.get(title='a1 edited')
