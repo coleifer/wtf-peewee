@@ -243,6 +243,11 @@ class WTFPeeweeTestCase(unittest.TestCase):
             'content': 'some content',
             'blog': self.blog_b.get_pk(),
         }))
+        
+        # check the htmlz for the form's hidden field
+        html = form._fields['blog']()
+        self.assertEqual(html, u'<input id="blog" name="blog" type="hidden" value="%s">' % self.blog_b.get_pk())
+        
         self.assertTrue(form.validate())
         self.assertEqual(form.blog.data, self.blog_b)
         
@@ -266,6 +271,10 @@ class WTFPeeweeTestCase(unittest.TestCase):
             'content': 'a1 content',
             'blog': self.blog_b.get_pk(),
         }), obj=self.entry_a1)
+        
+        # check the htmlz for the form's hidden field
+        html = form._fields['blog']()
+        self.assertEqual(html, u'<input id="blog" name="blog" type="hidden" value="%s">' % self.blog_b.get_pk())
         
         self.assertTrue(form.validate())
         
