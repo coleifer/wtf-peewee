@@ -1,0 +1,15 @@
+{% extends "posts/base_post.html" %}
+
+{% block title %}Posts{% endblock %}
+
+{% block content_title %}Posts{% endblock %}
+
+{% block content %}
+  <ul>
+  {% for post in posts %}
+    <li><a href="{{ url_for('detail', id=post.id) }}">{{ post.title }}</a>,
+      published {{ post.pub_date.strftime("%B %d %I:%M") }} ({{ post.comment_count }} comments)
+    </li>
+  {% endfor %}
+  </ul>
+{% endblock %}

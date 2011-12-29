@@ -1,0 +1,29 @@
+{% extends "posts/base_post.html" %}
+
+{% block title %}Edit post{% endblock %}
+
+{% block content_title %}Edit post{% endblock %}
+
+{% block content %}
+  <form method="post" action="">
+    {% for field in form %}
+      <div class="clearfix{% if field.errors %} error{% endif %}">
+        {{ field.label }}
+        <div class="input">
+          {% if field.errors %}
+            {{ field(class='invalid') }}
+            {% if field.description %}<span class="help">{{ field.description|safe() }}</span>{% endif %}
+            <ul class="errors">{% for error in field.errors %}<li>{{ error|e }}</li>{% endfor %}</ul>
+          {% else %}
+            {{ field() }}
+            {% if field.description %}<span class="help">{{ field.description|safe() }}</span>{% endif %}
+          {% endif %}
+        </div>
+      </div>
+    {% endfor %}
+    <div class="actions">
+      <button class="btn primary" type="submit">Save</button>
+      <a class="btn" href="/">Cancel</a>
+    </div>
+  </form>
+{% endblock %}

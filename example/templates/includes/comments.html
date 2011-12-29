@@ -1,0 +1,29 @@
+<hr />
+<h3 id="comments">Comments</h3>
+
+{% for comment in post.comments %}
+  <div class="row">
+    <p class="span2"><strong>{{ comment.name }}</strong></p>
+    <p class="span8">{{ comment.comment }}</p>
+  </div>
+{% else %}
+  <p>No comments have been posted</p>
+{% endfor %}
+
+<hr />
+<h3>Add a comment</h3>
+<form method="post" action="{{ url_for('comment') }}">
+  {{ comment_form.post }}
+  <div class="clearfix">
+    {{ comment_form.name.label }}
+    <div class="input">{{ comment_form.name }}</div>
+  </div>
+  <div class="clearfix">
+    {{ comment_form.comment.label }}
+    <div class="input">{{ comment_form.comment }}</div>
+  </div>
+
+  <div class="actions">
+    <button class="btn primary" type="submit">Post comment</button>
+  </div>
+</form>

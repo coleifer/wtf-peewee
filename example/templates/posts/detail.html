@@ -1,0 +1,20 @@
+{% extends "posts/base_post.html" %}
+
+{% block title %}{{ post.title }}{% endblock %}
+
+{% block content_header %}
+  <a href="{{ url_for('edit', id=post.id) }}" class="btn info">Edit</a>
+  {{ super() }}
+{% endblock %}
+
+{% block content_title %}{{ post.title }}{% endblock %}
+
+{% block content %}
+  <p><small>Published {{ post.pub_date.strftime("%B %d %I:%M") }} |
+    <a href="#comments">Comments: {{ post.comments.count() }}</a>
+  </small></p>
+  
+  <p>{{ post.content|safe }}</p>
+  
+  {% include "includes/comments.html" %}
+{% endblock %}
