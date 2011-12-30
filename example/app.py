@@ -54,7 +54,10 @@ class Post(BaseModel):
     title = CharField()
     content = TextField()
     pub_date = DateTimeField(default=datetime.datetime.now)
-    
+
+    def __unicode__(self):                                                                                                                                         
+        return self.title
+
     class Meta:
         ordering = (('pub_date', 'desc'),)
 
