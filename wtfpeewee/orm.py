@@ -37,6 +37,8 @@ class ModelConverter(object):
             self.converters.update(additional)
     
     def handle_foreign_key(self, model, field, **kwargs):
+        if field.null:
+            kwargs['allow_blank'] = True
         return field.descriptor, ModelSelectField(model=field.to, **kwargs)
     
     def convert(self, model, field, field_args):

@@ -39,11 +39,11 @@ class SelectQueryField(SelectFieldBase):
     def __init__(self, label=None, validators=None, query=None, get_label=None, allow_blank=False, blank_text=u'', **kwargs):
         super(SelectQueryField, self).__init__(label, validators, **kwargs)
         self.allow_blank = allow_blank
-        self.blank_text = blank_text
+        self.blank_text = blank_text or '----------------'
         self.query = query
         self.model = query.model
         self._set_data(None)
-
+        
         if get_label is None:
             self.get_label = lambda o: unicode(o)
         elif isinstance(get_label, basestring):
