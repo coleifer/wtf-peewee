@@ -75,7 +75,7 @@ class Comment(BaseModel):
 # form classes
 class HiddenForeignKeyConverter(ModelConverter):
     def handle_foreign_key(self, model, field, **kwargs):
-        return field.descriptor, ModelHiddenField(model=field.to, **kwargs)
+        return field.name, ModelHiddenField(model=field.to, **kwargs)
 
 PostForm = model_form(Post)
 CommentForm = model_form(Comment, exclude=('pub_date',), converter=HiddenForeignKeyConverter())
