@@ -32,8 +32,15 @@ class Entry(TestModel):
     def __unicode__(self):
         return '%s: %s' % (self.blog.title, self.title)
 
+
+class NullFieldsModel(TestModel):
+    c = CharField(null=True)
+    b = BooleanField(null=True)
+
+
 BlogForm = model_form(Blog)
 EntryForm = model_form(Entry)
+NullFieldsModelForm = model_form(NullFieldsModel)
 
 class FakePost(dict):
     def getlist(self, key):
@@ -47,9 +54,11 @@ class WTFPeeweeTestCase(unittest.TestCase):
     def setUp(self):
         Entry.drop_table(True)
         Blog.drop_table(True)
+        NullFieldsModel.drop_table(True)
         
         Blog.create_table()
         Entry.create_table()
+        NullFieldsModel.create_table()
         
         self.blog_a = Blog.create(title='a')
         self.blog_b = Blog.create(title='b')
@@ -194,6 +203,38 @@ class WTFPeeweeTestCase(unittest.TestCase):
             'blog': 10000
         }))
         self.assertFalse(form.validate())
+    
+    def test_null_form_saving(self):
+        form = NullFieldsModelForm(FakePost({'c': ''}))
+        self.assertTrue(form.validate())
+        
+        nfm = NullFieldsModel()
+        form.populate_obj(nfm)
+        self.assertEqual(nfm.c, None)
+        
+        # this is a bit odd, but since checkboxes do not send a value if they
+        # are unchecked this will evaluate to false (and passing in an empty
+        # string evalutes to true) since the wtforms booleanfield blindly coerces
+        # to bool
+        self.assertEqual(nfm.b, False)
+        
+        form = NullFieldsModelForm(FakePost({'c': '', 'b': ''}))
+        self.assertTrue(form.validate())
+        
+        nfm = NullFieldsModel()
+        form.populate_obj(nfm)
+        self.assertEqual(nfm.c, None)
+        
+        # again, this is for the purposes of documenting behavior -- nullable
+        # booleanfields won't work without a custom field class
+        self.assertEqual(nfm.b, True)
+        
+        form = NullFieldsModelForm(FakePost({'c': 'test'}))
+        self.assertTrue(form.validate())
+        
+        nfm = NullFieldsModel()
+        form.populate_obj(nfm)
+        self.assertEqual(nfm.c, 'test')
     
     def test_form_with_only_exclude(self):
         frm = model_form(Entry, only=('title', 'content',))()

@@ -15,6 +15,11 @@ __all__ = (
     'model_fields', 'model_form',
 )
 
+def handle_null_filter(data):
+    if data == '':
+        return None
+    return data
+
 
 class ModelConverter(object):
     defaults = {
@@ -54,6 +59,7 @@ class ModelConverter(object):
         
         if field.null:
             kwargs['validators'].append(validators.Optional())
+            kwargs['filters'].append(handle_null_filter)
         else:
             if isinstance(field, self.required):
                 kwargs['validators'].append(validators.Required())
