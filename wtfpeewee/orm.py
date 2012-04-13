@@ -8,7 +8,8 @@ from wtforms import validators
 from wtfpeewee.fields import ModelSelectField
 
 from peewee import PrimaryKeyField, IntegerField, FloatField, DateTimeField,\
-    BooleanField, CharField, TextField, ForeignKeyField, DecimalField
+    BooleanField, CharField, TextField, ForeignKeyField, DecimalField, DateField,\
+    TimeField
 
 
 __all__ = (
@@ -28,6 +29,8 @@ class ModelConverter(object):
         FloatField: f.FloatField,
         DecimalField: f.DecimalField,
         DateTimeField: f.DateTimeField,
+        DateField: f.DateField,
+        TimeField: f.TextField,
         BooleanField: f.BooleanField,
         CharField: f.TextField,
         TextField: f.TextAreaField,
