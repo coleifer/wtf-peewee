@@ -19,6 +19,7 @@ import datetime
 
 from flask import Flask, redirect, render_template, request, g, abort, url_for, flash
 from peewee import *
+from wtforms.validators import Length
 from wtfpeewee.fields import ModelHiddenField
 from wtfpeewee.orm import model_form, ModelConverter
 
@@ -77,7 +78,11 @@ class HiddenForeignKeyConverter(ModelConverter):
     def handle_foreign_key(self, model, field, **kwargs):
         return field.name, ModelHiddenField(model=field.to, **kwargs)
 
-PostForm = model_form(Post)
+
+PostForm = model_form(Post, field_args={
+    'title': dict(validators=[Length(min=3, max=200)]), # title must be at least 3 chars long
+    'content': dict(description='this is the body of the post'), # a little help text
+})
 CommentForm = model_form(Comment, exclude=('pub_date',), converter=HiddenForeignKeyConverter())
 
 
