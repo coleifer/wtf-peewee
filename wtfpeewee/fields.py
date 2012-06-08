@@ -6,14 +6,48 @@ import operator
 import warnings
 
 from wtforms import widgets
-from wtforms.fields import SelectFieldBase, HiddenField
+from wtforms.fields import SelectField, SelectFieldBase, HiddenField
 from wtforms.validators import ValidationError
 
 
 __all__ = (
     'ModelSelectField', 'ModelSelectMultipleField', 'ModelHiddenField',
-    'SelectQueryField', 'SelectMultipleQueryField', 'HiddenQueryField'
+    'SelectQueryField', 'SelectMultipleQueryField', 'HiddenQueryField',
+    'SelectChoicesField',
 )
+
+
+class SelectChoicesField(SelectField):
+    def __init__(self, label=None, validators=None, coerce=unicode, choices=None, allow_blank=False, blank_text=u'', **kwargs):
+        super(SelectChoicesField, self).__init__(label, validators, coerce, choices, **kwargs)
+        self.allow_blank = allow_blank
+        self.blank_text = blank_text or '----------------'
+    
+    def iter_choices(self):
+        if self.allow_blank:
+            yield (u'__None', self.blank_text, self.data is None)
+        
+        for value, label in self.choices:
+            yield (value, label, self.coerce(value) == self.data)
+
+    def process_data(self, value):
+        if value is None:
+            self.data = None
+        else:
+            try:
+                self.data = self.coerce(value)
+            except (ValueError, TypeError):
+                self.data = None
+
+    def process_formdata(self, valuelist):
+        if valuelist:
+            if valuelist[0] == '__None':
+                self.data = None
+            else:
+                try:
+                    self.data = self.coerce(valuelist[0])
+                except ValueError:
+                    raise ValueError(self.gettext(u'Invalid Choice: could not coerce'))
 
 
 class SelectQueryField(SelectFieldBase):

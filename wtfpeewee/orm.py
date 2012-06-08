@@ -2,10 +2,11 @@
 Tools for generating forms based on Peewee models
 (cribbed from wtforms.ext.django)
 """
+from decimal import Decimal
 from wtforms import fields as f
 from wtforms import Form
 from wtforms import validators
-from wtfpeewee.fields import ModelSelectField
+from wtfpeewee.fields import ModelSelectField, SelectChoicesField
 
 from peewee import PrimaryKeyField, IntegerField, FloatField, DateTimeField,\
     BooleanField, CharField, TextField, ForeignKeyField, DecimalField, DateField,\
@@ -35,19 +36,33 @@ class ModelConverter(object):
         CharField: f.TextField,
         TextField: f.TextAreaField,
     }
+    coerce_defaults = {
+        IntegerField: int,
+        FloatField: float,
+        CharField: unicode,
+        TextField: unicode,
+    }
     required = (DateTimeField, CharField, TextField, ForeignKeyField,)
     
-    def __init__(self, additional=None):
+    def __init__(self, additional=None, additional_coerce=None):
         self.converters = {
             ForeignKeyField: self.handle_foreign_key,
         }
         if additional:
             self.converters.update(additional)
+
+        self.coerce_settings = dict(self.coerce_defaults)
+        if additional_coerce:
+            self.coerce_settings.update(additional_coerce)
     
     def handle_foreign_key(self, model, field, **kwargs):
         if field.null:
             kwargs['allow_blank'] = True
-        return field.name, ModelSelectField(model=field.to, **kwargs)
+        if field.choices is not None:
+            field_obj = SelectQueryField(query=field.choices, **kwargs)
+        else:
+            field_obj = ModelSelectField(model=field.to, **kwargs)
+        return field.name, field_obj
     
     def convert(self, model, field, field_args):
         kwargs = dict(
@@ -72,6 +87,14 @@ class ModelConverter(object):
         if field_class in self.converters:
             return self.converters[field_class](model, field, **kwargs)
         elif field_class in self.defaults:
+            if field.choices or 'choices' in kwargs:
+                choices = kwargs.pop('choices', field.choices)
+                if field_class in self.coerce_settings or 'coerce' in kwargs:
+                    coerce_fn = kwargs.pop('coerce', self.coerce_settings[field_class])
+                    allow_blank = kwargs.pop('allow_blank', field.null)
+                    kwargs.update(dict(choices=choices, coerce=coerce_fn, allow_blank=allow_blank))
+                    return field.name, SelectChoicesField(**kwargs)
+            
             return field.name, self.defaults[field_class](**kwargs)
 
 

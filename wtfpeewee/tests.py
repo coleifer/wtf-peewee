@@ -38,9 +38,17 @@ class NullFieldsModel(TestModel):
     b = BooleanField(null=True)
 
 
+class ChoicesModel(TestModel):
+    gender = CharField(choices=(('m', 'Male'), ('f', 'Female')))
+    status = IntegerField(choices=((1, 'One'), (2, 'Two')))
+    salutation = CharField(null=True)
+    true_or_false = BooleanField(choices=((True, 't'), (False, 'f')))
+
+
 BlogForm = model_form(Blog)
 EntryForm = model_form(Entry)
 NullFieldsModelForm = model_form(NullFieldsModel)
+ChoicesForm = model_form(ChoicesModel, field_args={'salutation': {'choices': (('mr', 'Mr.'), ('mrs', 'Mrs.'))}})
 
 class FakePost(dict):
     def getlist(self, key):
@@ -66,6 +74,48 @@ class WTFPeeweeTestCase(unittest.TestCase):
         self.entry_a1 = Entry.create(blog=self.blog_a, title='a1', content='a1 content', pub_date=datetime.datetime(2011, 1, 1))
         self.entry_a2 = Entry.create(blog=self.blog_a, title='a2', content='a2 content', pub_date=datetime.datetime(2011, 1, 2))
         self.entry_b1 = Entry.create(blog=self.blog_b, title='b1', content='b1 content', pub_date=datetime.datetime(2011, 1, 1))
+    
+    def test_choices(self):
+        form = ChoicesForm()
+        self.assertTrue(isinstance(form.gender, SelectChoicesField))
+        self.assertTrue(isinstance(form.status, SelectChoicesField))
+        self.assertTrue(isinstance(form.salutation, SelectChoicesField))
+        self.assertTrue(isinstance(form.true_or_false, wtfields.BooleanField))
+        
+        self.assertEqual(list(form.gender.iter_choices()), [
+            ('m', 'Male', False), ('f', 'Female', False)
+        ])
+        self.assertEqual(list(form.status.iter_choices()), [
+            (1, 'One', False), (2, 'Two', False)
+        ])
+        self.assertEqual(list(form.salutation.iter_choices()), [
+            ('__None', '----------------', True), ('mr', 'Mr.', False), ('mrs', 'Mrs.', False),
+        ])
+        
+        choices_obj = ChoicesModel(gender='m', status=2, salutation=None)
+        form = ChoicesForm(obj=choices_obj)
+        self.assertEqual(form.data, {'gender': 'm', 'status': 2, 'salutation': None, 'true_or_false': False})
+        self.assertTrue(form.validate())
+        
+        choices_obj = ChoicesModel(gender='f', status=1, salutation='mrs', true_or_false=True)
+        form = ChoicesForm(obj=choices_obj)
+        self.assertEqual(form.data, {'gender': 'f', 'status': 1, 'salutation': 'mrs', 'true_or_false': True})
+        self.assertTrue(form.validate())
+        
+        choices_obj.gender = 'x'
+        form = ChoicesForm(obj=choices_obj)
+        self.assertFalse(form.validate())
+        self.assertEqual(form.errors, {'gender': ['Not a valid choice']})
+        
+        choices_obj.gender = 'm'
+        choices_obj.status = '1'
+        form = ChoicesForm(obj=choices_obj)
+        self.assertEqual(form.status.data, 1)
+        self.assertTrue(form.validate())
+        
+        choices_obj.status = '3'
+        form = ChoicesForm(obj=choices_obj)
+        self.assertFalse(form.validate())
     
     def test_blog_form(self):
         form = BlogForm()
