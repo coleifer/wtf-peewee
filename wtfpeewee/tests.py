@@ -40,7 +40,7 @@ class NullFieldsModel(TestModel):
 
 class ChoicesModel(TestModel):
     gender = CharField(choices=(('m', 'Male'), ('f', 'Female')))
-    status = IntegerField(choices=((1, 'One'), (2, 'Two')))
+    status = IntegerField(choices=((1, 'One'), (2, 'Two')), null=True)
     salutation = CharField(null=True)
     true_or_false = BooleanField(choices=((True, 't'), (False, 'f')))
 
@@ -86,7 +86,7 @@ class WTFPeeweeTestCase(unittest.TestCase):
             ('m', 'Male', False), ('f', 'Female', False)
         ])
         self.assertEqual(list(form.status.iter_choices()), [
-            (1, 'One', False), (2, 'Two', False)
+            ('__None', '----------------', True), (1, 'One', False), (2, 'Two', False)
         ])
         self.assertEqual(list(form.salutation.iter_choices()), [
             ('__None', '----------------', True), ('mr', 'Mr.', False), ('mrs', 'Mrs.', False),
@@ -115,7 +115,13 @@ class WTFPeeweeTestCase(unittest.TestCase):
         
         choices_obj.status = '3'
         form = ChoicesForm(obj=choices_obj)
+        
         self.assertFalse(form.validate())
+        
+        choices_obj.status = None
+        form = ChoicesForm(obj=choices_obj)
+        self.assertEqual(form.status.data, None)
+        self.assertTrue(form.validate())
     
     def test_blog_form(self):
         form = BlogForm()

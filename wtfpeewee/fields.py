@@ -18,6 +18,7 @@ __all__ = (
 
 
 class SelectChoicesField(SelectField):
+    # all of this exists so i can get proper handling of None
     def __init__(self, label=None, validators=None, coerce=unicode, choices=None, allow_blank=False, blank_text=u'', **kwargs):
         super(SelectChoicesField, self).__init__(label, validators, coerce, choices, **kwargs)
         self.allow_blank = allow_blank
@@ -48,6 +49,11 @@ class SelectChoicesField(SelectField):
                     self.data = self.coerce(valuelist[0])
                 except ValueError:
                     raise ValueError(self.gettext(u'Invalid Choice: could not coerce'))
+    
+    def pre_validate(self, form):
+        if self.allow_blank and self.data is None:
+            return
+        super(SelectChoicesField, self).pre_validate(form)
 
 
 class SelectQueryField(SelectFieldBase):
