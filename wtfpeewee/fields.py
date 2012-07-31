@@ -128,7 +128,7 @@ class SelectQueryField(SelectFieldBase):
                 self.data = None
             else:
                 self._data = None
-                self._formdata = int(valuelist[0])
+                self._formdata = valuelist[0]
 
     def pre_validate(self, form):
         if self.data is not None:
