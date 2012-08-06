@@ -2,6 +2,7 @@ import datetime
 import unittest
 
 from peewee import *
+from peewee import VarCharColumn
 from wtforms import fields as wtfields
 from wtforms.form import Form as WTForm
 from wtfpeewee.fields import *
@@ -45,10 +46,16 @@ class ChoicesModel(TestModel):
     true_or_false = BooleanField(choices=((True, 't'), (False, 'f')))
 
 
+class NonIntPKModel(TestModel):
+    id = PrimaryKeyField(column_class=VarCharColumn)
+    value = CharField()
+
+
 BlogForm = model_form(Blog)
 EntryForm = model_form(Entry)
 NullFieldsModelForm = model_form(NullFieldsModel)
 ChoicesForm = model_form(ChoicesModel, field_args={'salutation': {'choices': (('mr', 'Mr.'), ('mrs', 'Mrs.'))}})
+NonIntPKForm = model_form(NonIntPKModel, allow_pk=True)
 
 class FakePost(dict):
     def getlist(self, key):
@@ -63,10 +70,12 @@ class WTFPeeweeTestCase(unittest.TestCase):
         Entry.drop_table(True)
         Blog.drop_table(True)
         NullFieldsModel.drop_table(True)
+        NonIntPKModel.drop_table(True)
         
         Blog.create_table()
         Entry.create_table()
         NullFieldsModel.create_table()
+        NonIntPKModel.create_table()
         
         self.blog_a = Blog.create(title='a')
         self.blog_b = Blog.create(title='b')
@@ -74,6 +83,31 @@ class WTFPeeweeTestCase(unittest.TestCase):
         self.entry_a1 = Entry.create(blog=self.blog_a, title='a1', content='a1 content', pub_date=datetime.datetime(2011, 1, 1))
         self.entry_a2 = Entry.create(blog=self.blog_a, title='a2', content='a2 content', pub_date=datetime.datetime(2011, 1, 2))
         self.entry_b1 = Entry.create(blog=self.blog_b, title='b1', content='b1 content', pub_date=datetime.datetime(2011, 1, 1))
+
+    def test_non_int_pk(self):
+        form = NonIntPKForm()
+        self.assertEqual(form.data, {'value': None, 'id': None})
+        self.assertFalse(form.validate())
+
+        obj = NonIntPKModel(id='a', value='A')
+        form = NonIntPKForm(obj=obj)
+        self.assertEqual(form.data, {'value': 'A', 'id': 'a'})
+        self.assertTrue(form.validate())
+
+        form = NonIntPKForm(FakePost({'id': 'b', 'value': 'B'}))
+        self.assertTrue(form.validate())
+        
+        obj = NonIntPKModel()
+        form.populate_obj(obj)
+        self.assertEqual(obj.id, 'b')
+        self.assertEqual(obj.value, 'B')
+
+        self.assertEqual(NonIntPKModel.select().count(), 0)
+        obj.save(True)
+        self.assertEqual(NonIntPKModel.select().count(), 1)
+
+        form = NonIntPKForm(FakePost({'id': 'b', 'value': 'C'}))
+        self.assertFalse(form.validate())
     
     def test_choices(self):
         form = ChoicesForm()
