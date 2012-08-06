@@ -17,7 +17,24 @@ __all__ = (
 )
 
 
+class ChosenSelectWidget(widgets.Select):
+    """
+        `Chosen <http://harvesthq.github.com/chosen/>`_ styled select widget.
+
+        You must include chosen.js for styling to work.
+    """
+    def __call__(self, field, **kwargs):
+        if field.allow_blank and not self.multiple:
+            kwargs['data-role'] = u'chosenblank'
+        else:
+            kwargs['data-role'] = u'chosen'
+
+        return super(ChosenSelectWidget, self).__call__(field, **kwargs)
+
+
 class SelectChoicesField(SelectField):
+    widget = ChosenSelectWidget()
+
     # all of this exists so i can get proper handling of None
     def __init__(self, label=None, validators=None, coerce=unicode, choices=None, allow_blank=False, blank_text=u'', **kwargs):
         super(SelectChoicesField, self).__init__(label, validators, coerce, choices, **kwargs)
@@ -74,7 +91,7 @@ class SelectQueryField(SelectFieldBase):
     being `None`.  The label for the blank choice can be set by specifying the
     `blank_text` parameter.
     """
-    widget = widgets.Select()
+    widget = ChosenSelectWidget()
 
     def __init__(self, label=None, validators=None, query=None, get_label=None, allow_blank=False, blank_text=u'', **kwargs):
         super(SelectQueryField, self).__init__(label, validators, **kwargs)
@@ -128,7 +145,7 @@ class SelectQueryField(SelectFieldBase):
                 self.data = None
             else:
                 self._data = None
-                self._formdata = int(valuelist[0])
+                self._formdata = valuelist[0]
 
     def pre_validate(self, form):
         if self.data is not None:
@@ -139,7 +156,7 @@ class SelectQueryField(SelectFieldBase):
 
 
 class SelectMultipleQueryField(SelectQueryField):
-    widget = widgets.Select(multiple=True)
+    widget =  ChosenSelectWidget(multiple=True)
     
     def __init__(self, *args, **kwargs):
         kwargs.pop('allow_blank', None)
