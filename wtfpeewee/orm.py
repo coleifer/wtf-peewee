@@ -5,12 +5,12 @@ Tools for generating forms based on Peewee models
 from decimal import Decimal
 from wtforms import fields as f
 from wtforms import Form
-from wtforms import validators
+from wtforms import validators, ValidationError
 from wtfpeewee.fields import ModelSelectField, SelectChoicesField
 
 from peewee import PrimaryKeyField, IntegerField, FloatField, DateTimeField,\
     BooleanField, CharField, TextField, ForeignKeyField, DecimalField, DateField,\
-    TimeField
+    TimeField, DoesNotExist, IntegerColumn, FloatColumn, DoubleColumn
 
 
 __all__ = (
@@ -21,6 +21,33 @@ def handle_null_filter(data):
     if data == '':
         return None
     return data
+
+
+class Unique(object):
+    """Checks field value unicity against specified table field.
+
+    :param model:
+        The model to check unicity against.
+    :param column:
+        The unique column.
+    :param message:
+        The error message.
+    """
+
+    def __init__(self, model, column, message=None):
+        self.model = model
+        self.column = column
+        self.message = message
+
+    def __call__(self, form, field):
+        try:
+            obj = self.model.get(**{self.column:field.data})
+            if obj and obj.get_field_dict() != form.data:  # dupicate
+                if self.message is None:
+                    self.message = field.gettext('Already exists.')
+                raise ValidationError(self.message)
+        except DoesNotExist:
+            pass
 
 
 class ModelConverter(object):
@@ -42,7 +69,7 @@ class ModelConverter(object):
         CharField: unicode,
         TextField: unicode,
     }
-    required = (DateTimeField, CharField, TextField, ForeignKeyField,)
+    required = (DateTimeField, CharField, TextField, ForeignKeyField, PrimaryKeyField)
     
     def __init__(self, additional=None, additional_coerce=None):
         self.converters = {
@@ -64,6 +91,18 @@ class ModelConverter(object):
             field_obj = ModelSelectField(model=field.to, **kwargs)
         return field.name, field_obj
     
+    def handle_primary_key(self, model, field, **kwargs):
+        if field.column_class == IntegerColumn:
+            field_obj = f.IntegerField(**kwargs)
+        elif field.column_class in (FloatColumn, DoubleColumn):
+            field_obj = f.FloatField(**kwargs)
+        else:
+            field_obj = f.TextField(**kwargs)
+        return field.name, field_obj
+
+    def add_primary_key_handler(self):
+        self.converters.update({PrimaryKeyField: self.handle_primary_key})
+
     def convert(self, model, field, field_args):
         kwargs = dict(
             label=field.verbose_name,
@@ -83,6 +122,11 @@ class ModelConverter(object):
             if isinstance(field, self.required):
                 kwargs['validators'].append(validators.Required())
         
+        if isinstance(field, PrimaryKeyField):
+            kwargs['validators'].append(Unique(model, field.name))
+        elif field.unique:
+            kwargs['validators'].append(Unique(model, field.name))
+
         field_class = type(field)
         
         if field_class in self.converters:
@@ -112,6 +156,8 @@ def model_fields(model, allow_pk=False, only=None, exclude=None, field_args=None
 
     if not allow_pk:
         model_fields.pop(0)
+    else:
+        converter.add_primary_key_handler()
 
     if only:
         model_fields = (x for x in model_fields if x[0] in only)
