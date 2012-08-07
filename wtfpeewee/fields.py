@@ -75,7 +75,6 @@ class WPTimeField(StaticAttributesMixin, fields.TextField):
                     self.data = datetime.datetime.strptime(date_str, '%H:%M').time()
                 except ValueError:
                     self.data = None
-                    import ipdb; ipdb.set_trace()
                     raise ValueError(self.gettext(u'Not a valid time value'))
 
 
