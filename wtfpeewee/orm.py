@@ -24,33 +24,6 @@ def handle_null_filter(data):
     return data
 
 
-class Unique(object):
-    """Checks field value unicity against specified table field.
-
-    :param model:
-        The model to check unicity against.
-    :param column:
-        The unique column.
-    :param message:
-        The error message.
-    """
-
-    def __init__(self, model, column, message=None):
-        self.model = model
-        self.column = column
-        self.message = message
-
-    def __call__(self, form, field):
-        try:
-            obj = self.model.get(**{self.column:field.data})
-            if obj and obj.get_field_dict() != form.data:  # dupicate
-                if self.message is None:
-                    self.message = field.gettext('Already exists.')
-                raise ValidationError(self.message)
-        except DoesNotExist:
-            pass
-
-
 class ModelConverter(object):
     defaults = {
         PrimaryKeyField: f.HiddenField,
@@ -122,11 +95,6 @@ class ModelConverter(object):
         else:
             if isinstance(field, self.required):
                 kwargs['validators'].append(validators.Required())
-
-        if isinstance(field, PrimaryKeyField):
-            kwargs['validators'].append(Unique(model, field.name))
-        elif field.unique:
-            kwargs['validators'].append(Unique(model, field.name))
 
         field_class = type(field)
 
