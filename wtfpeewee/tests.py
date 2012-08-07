@@ -169,7 +169,7 @@ class WTFPeeweeTestCase(unittest.TestCase):
         
         self.assertTrue(isinstance(form.blog, ModelSelectField))
         self.assertTrue(isinstance(form.content, wtfields.TextAreaField))
-        self.assertTrue(isinstance(form.pub_date, wtfields.DateTimeField))
+        self.assertTrue(isinstance(form.pub_date, WPDateTimeField))
         self.assertTrue(isinstance(form.title, wtfields.TextField))
         
         self.assertEqual(form.title.label.text, 'Wacky title')
@@ -244,7 +244,8 @@ class WTFPeeweeTestCase(unittest.TestCase):
         form = EntryForm(FakePost({
             'title': 'new entry',
             'content': 'some content',
-            'pub_date': '2011-02-01 00:00:00',
+            'pub_date-date': '2011-02-01', 
+            'pub_date-time': '00:00:00',
             'blog': self.blog_b.get_pk(),
         }))
         self.assertTrue(form.validate())

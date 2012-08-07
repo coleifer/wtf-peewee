@@ -2,19 +2,133 @@
 Useful form fields for use with the Peewee ORM.
 (cribbed from wtforms.ext.django.fields)
 """
+import datetime
 import operator
 import warnings
 
-from wtforms import widgets
-from wtforms.fields import SelectField, SelectFieldBase, HiddenField
+from wtforms import fields, form, widgets
+from wtforms.fields import FormField, _unset_value
 from wtforms.validators import ValidationError
+from wtforms.widgets import HTMLString, html_params
 
 
 __all__ = (
     'ModelSelectField', 'ModelSelectMultipleField', 'ModelHiddenField',
     'SelectQueryField', 'SelectMultipleQueryField', 'HiddenQueryField',
-    'SelectChoicesField',
+    'SelectChoicesField', 'BooleanSelectField', 'WPTimeField', 'WPDateField',
+    'WPDateTimeField',
 )
+
+
+class StaticAttributesMixin(object):
+    attributes = {}
+
+    def __call__(self, **kwargs):
+        for key, value in self.attributes.items():
+            if key in kwargs:
+                curr = kwargs[key]
+                kwargs[key] = '%s %s' % (value, curr)
+        return super(StaticAttributesMixin, self).__call__(**kwargs)
+
+
+class BooleanSelectField(fields.SelectFieldBase):
+    widget = widgets.Select()
+
+    def iter_choices(self):
+        yield ('1', 'True', self.data)
+        yield ('', 'False', not self.data)
+
+    def process_data(self, value):
+        try:
+            self.data = bool(value)
+        except (ValueError, TypeError):
+            self.data = None
+
+    def process_formdata(self, valuelist):
+        if valuelist:
+            try:
+                self.data = bool(valuelist[0])
+            except ValueError:
+                raise ValueError(self.gettext(u'Invalid Choice: could not coerce'))
+
+
+class WPTimeField(StaticAttributesMixin, fields.TextField):
+    attributes = {'class': 'time-widget'}
+
+    def __init__(self, label=None, validators=None, format='%H:%M:%S', **kwargs):
+        super(WPTimeField, self).__init__(label, validators, **kwargs)
+        self.format = format
+
+    def _value(self):
+        if self.raw_data:
+            return u' '.join(self.raw_data)
+        else:
+            return self.data and self.data.strftime(self.format) or u''
+
+    def process_formdata(self, valuelist):
+        if valuelist:
+            date_str = u' '.join(valuelist)
+            try:
+                self.data = datetime.datetime.strptime(date_str, self.format).time()
+            except ValueError:
+                try:
+                    self.data = datetime.datetime.strptime(date_str, '%H:%M').time()
+                except ValueError:
+                    self.data = None
+                    import ipdb; ipdb.set_trace()
+                    raise ValueError(self.gettext(u'Not a valid time value'))
+
+
+class WPDateField(StaticAttributesMixin, fields.DateField):
+    attributes = {'class': 'date-widget'}
+
+
+def datetime_widget(field, **kwargs):
+    kwargs.setdefault('id', field.id)
+    kwargs['class'] += ' datetime-widget'
+    html = []
+    for subfield in field:
+        html.append(subfield(**kwargs))
+    return HTMLString(u''.join(html))
+
+
+class _DateTimeForm(form.Form):
+    date = WPDateField()
+    time = WPTimeField()
+
+
+class WPDateTimeField(FormField):
+    widget = staticmethod(datetime_widget)
+
+    def __init__(self, label='', validators=None, **kwargs):
+        validators = None
+        super(WPDateTimeField, self).__init__(
+            _DateTimeForm, label, validators,
+            **kwargs
+        )
+
+    def process(self, formdata, data=_unset_value):
+        prefix = self.name + self.separator
+        kwargs = {}
+        if data is _unset_value:
+            try:
+                data = self.default()
+            except TypeError:
+                data = self.default
+
+        if data and data is not _unset_value:
+            kwargs['date'] = data.date()
+            kwargs['time'] = data.time()
+
+        self.form = self.form_class(formdata, prefix=prefix, **kwargs)
+
+    def populate_obj(self, obj, name):
+        setattr(obj, name, self.data)
+
+    @property
+    def data(self):
+        if self.date.data is not None and self.time.data is not None:
+            return datetime.datetime.combine(self.date.data, self.time.data)
 
 
 class ChosenSelectWidget(widgets.Select):
@@ -32,7 +146,7 @@ class ChosenSelectWidget(widgets.Select):
         return super(ChosenSelectWidget, self).__call__(field, **kwargs)
 
 
-class SelectChoicesField(SelectField):
+class SelectChoicesField(fields.SelectField):
     widget = ChosenSelectWidget()
 
     # all of this exists so i can get proper handling of None
@@ -40,11 +154,11 @@ class SelectChoicesField(SelectField):
         super(SelectChoicesField, self).__init__(label, validators, coerce, choices, **kwargs)
         self.allow_blank = allow_blank
         self.blank_text = blank_text or '----------------'
-    
+
     def iter_choices(self):
         if self.allow_blank:
             yield (u'__None', self.blank_text, self.data is None)
-        
+
         for value, label in self.choices:
             yield (value, label, self.coerce(value) == self.data)
 
@@ -66,14 +180,14 @@ class SelectChoicesField(SelectField):
                     self.data = self.coerce(valuelist[0])
                 except ValueError:
                     raise ValueError(self.gettext(u'Invalid Choice: could not coerce'))
-    
+
     def pre_validate(self, form):
         if self.allow_blank and self.data is None:
             return
         super(SelectChoicesField, self).pre_validate(form)
 
 
-class SelectQueryField(SelectFieldBase):
+class SelectQueryField(fields.SelectFieldBase):
     """
     Given a SelectQuery either at initialization or inside a view, will display a
     select drop-down field of choices. The `data` property actually will
@@ -100,7 +214,7 @@ class SelectQueryField(SelectFieldBase):
         self.query = query
         self.model = query.model
         self._set_data(None)
-        
+
         if get_label is None:
             self.get_label = lambda o: unicode(o)
         elif isinstance(get_label, basestring):
@@ -126,7 +240,7 @@ class SelectQueryField(SelectFieldBase):
         self._formdata = None
 
     data = property(_get_data, _set_data)
-    
+
     def __call__(self, **kwargs):
         if 'value' in kwargs:
             self._set_data(self.get_model(kwargs['value']))
@@ -135,7 +249,7 @@ class SelectQueryField(SelectFieldBase):
     def iter_choices(self):
         if self.allow_blank:
             yield (u'__None', self.blank_text, self.data is None)
-        
+
         for obj in self.query.clone():
             yield (obj.get_pk(), self.get_label(obj), obj == self.data)
 
@@ -157,16 +271,16 @@ class SelectQueryField(SelectFieldBase):
 
 class SelectMultipleQueryField(SelectQueryField):
     widget =  ChosenSelectWidget(multiple=True)
-    
+
     def __init__(self, *args, **kwargs):
         kwargs.pop('allow_blank', None)
         super(SelectMultipleQueryField, self).__init__(*args, **kwargs)
-    
+
     def get_model_list(self, pk_list):
         return list(self.query.where(**{
             '%s__in' % self.model._meta.pk_name: pk_list
         }))
-    
+
     def _get_data(self):
         if self._formdata is not None:
             self._set_data(self.get_model_list(self._formdata))
@@ -177,7 +291,7 @@ class SelectMultipleQueryField(SelectQueryField):
         self._formdata = None
 
     data = property(_get_data, _set_data)
-    
+
     def __call__(self, **kwargs):
         if 'value' in kwargs:
             self._set_data(self.get_model_list(kwargs['value']))
@@ -200,9 +314,9 @@ class SelectMultipleQueryField(SelectQueryField):
                 raise ValidationError(self.gettext('Not a valid choice'))
 
 
-class HiddenQueryField(HiddenField):
+class HiddenQueryField(fields.HiddenField):
     def __init__(self, label=None, validators=None, query=None, get_label=None, **kwargs):
-        super(HiddenField, self).__init__(label, validators, **kwargs)
+        super(fields.HiddenField, self).__init__(label, validators, **kwargs)
         self.query = query
         self.model = query.model
         self._set_data(None)
@@ -232,12 +346,12 @@ class HiddenQueryField(HiddenField):
         self._formdata = None
 
     data = property(_get_data, _set_data)
-    
+
     def __call__(self, **kwargs):
         if 'value' in kwargs:
             self._set_data(self.get_model(kwargs['value']))
         return self.widget(self, **kwargs)
-    
+
     def _value(self):
         return self.data and self.data.get_pk()
 

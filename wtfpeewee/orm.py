@@ -6,7 +6,8 @@ from decimal import Decimal
 from wtforms import fields as f
 from wtforms import Form
 from wtforms import validators, ValidationError
-from wtfpeewee.fields import ModelSelectField, SelectChoicesField
+from wtfpeewee.fields import ModelSelectField, SelectChoicesField, WPTimeField,\
+    WPDateField, WPDateTimeField
 
 from peewee import PrimaryKeyField, IntegerField, FloatField, DateTimeField,\
     BooleanField, CharField, TextField, ForeignKeyField, DecimalField, DateField,\
@@ -56,9 +57,9 @@ class ModelConverter(object):
         IntegerField: f.IntegerField,
         FloatField: f.FloatField,
         DecimalField: f.DecimalField,
-        DateTimeField: f.DateTimeField,
-        DateField: f.DateField,
-        TimeField: f.TextField,
+        DateTimeField: WPDateTimeField,
+        DateField: WPDateField,
+        TimeField: WPTimeField,
         BooleanField: f.BooleanField,
         CharField: f.TextField,
         TextField: f.TextAreaField,
@@ -70,7 +71,7 @@ class ModelConverter(object):
         TextField: unicode,
     }
     required = (DateTimeField, CharField, TextField, ForeignKeyField, PrimaryKeyField)
-    
+
     def __init__(self, additional=None, additional_coerce=None):
         self.converters = {
             ForeignKeyField: self.handle_foreign_key,
@@ -81,7 +82,7 @@ class ModelConverter(object):
         self.coerce_settings = dict(self.coerce_defaults)
         if additional_coerce:
             self.coerce_settings.update(additional_coerce)
-    
+
     def handle_foreign_key(self, model, field, **kwargs):
         if field.null:
             kwargs['allow_blank'] = True
@@ -90,7 +91,7 @@ class ModelConverter(object):
         else:
             field_obj = ModelSelectField(model=field.to, **kwargs)
         return field.name, field_obj
-    
+
     def handle_primary_key(self, model, field, **kwargs):
         if field.column_class == IntegerColumn:
             field_obj = f.IntegerField(**kwargs)
@@ -113,7 +114,7 @@ class ModelConverter(object):
         )
         if field_args:
             kwargs.update(field_args)
-        
+
         if field.null:
             kwargs['filters'].append(handle_null_filter)
         elif field.default is not None:
@@ -121,14 +122,14 @@ class ModelConverter(object):
         else:
             if isinstance(field, self.required):
                 kwargs['validators'].append(validators.Required())
-        
+
         if isinstance(field, PrimaryKeyField):
             kwargs['validators'].append(Unique(model, field.name))
         elif field.unique:
             kwargs['validators'].append(Unique(model, field.name))
 
         field_class = type(field)
-        
+
         if field_class in self.converters:
             return self.converters[field_class](model, field, **kwargs)
         elif field_class in self.defaults:
@@ -139,7 +140,7 @@ class ModelConverter(object):
                     allow_blank = kwargs.pop('allow_blank', field.null)
                     kwargs.update(dict(choices=choices, coerce=coerce_fn, allow_blank=allow_blank))
                     return field.name, SelectChoicesField(**kwargs)
-            
+
             return field.name, self.defaults[field_class](**kwargs)
 
 
