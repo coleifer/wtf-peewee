@@ -10,7 +10,6 @@ setup(
     author_email='coleifer@gmail.com',
     description='WTForms integration for peewee models',
     packages=['wtfpeewee'],
-    namespace_packages=['wtfpeewee'],
     zip_safe=False,
     platforms='any',
     install_requires=[
