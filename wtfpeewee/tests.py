@@ -84,6 +84,15 @@ class WTFPeeweeTestCase(unittest.TestCase):
         self.entry_a2 = Entry.create(blog=self.blog_a, title='a2', content='a2 content', pub_date=datetime.datetime(2011, 1, 2))
         self.entry_b1 = Entry.create(blog=self.blog_b, title='b1', content='b1 content', pub_date=datetime.datetime(2011, 1, 1))
 
+    def test_defaults(self):
+        BlogFormDef = model_form(Blog, field_args={'title': {'default': 'hello world'}})
+
+        form = BlogFormDef()
+        self.assertEqual(form.data, {'title': 'hello world'})
+
+        form = BlogFormDef(obj=self.blog_a)
+        self.assertEqual(form.data, {'title': 'a'})
+
     def test_non_int_pk(self):
         form = NonIntPKForm()
         self.assertEqual(form.data, {'value': None, 'id': None})
