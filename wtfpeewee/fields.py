@@ -84,6 +84,7 @@ class WPDateField(StaticAttributesMixin, fields.DateField):
 
 def datetime_widget(field, **kwargs):
     kwargs.setdefault('id', field.id)
+    kwargs.setdefault('class', '')
     kwargs['class'] += ' datetime-widget'
     html = []
     for subfield in field:
