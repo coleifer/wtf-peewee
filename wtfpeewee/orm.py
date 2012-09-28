@@ -11,7 +11,7 @@ from wtfpeewee.fields import ModelSelectField, SelectChoicesField, WPTimeField,\
 
 from peewee import PrimaryKeyField, IntegerField, FloatField, DateTimeField,\
     BooleanField, CharField, TextField, ForeignKeyField, DecimalField, DateField,\
-    TimeField, DoesNotExist, IntegerColumn, FloatColumn, DoubleColumn
+    TimeField, DoesNotExist, IntegerColumn, FloatColumn, DoubleColumn, DoubleField
 
 
 __all__ = (
@@ -29,6 +29,7 @@ class ModelConverter(object):
         PrimaryKeyField: f.HiddenField,
         IntegerField: f.IntegerField,
         FloatField: f.FloatField,
+        DoubleField: f.FloatField,
         DecimalField: f.DecimalField,
         DateTimeField: WPDateTimeField,
         DateField: WPDateField,
