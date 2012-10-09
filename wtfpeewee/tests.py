@@ -2,7 +2,6 @@ import datetime
 import unittest
 
 from peewee import *
-from peewee import VarCharColumn
 from wtforms import fields as wtfields
 from wtforms.form import Form as WTForm
 from wtfpeewee.fields import *
@@ -47,7 +46,7 @@ class ChoicesModel(TestModel):
 
 
 class NonIntPKModel(TestModel):
-    id = PrimaryKeyField(column_class=VarCharColumn)
+    id = CharField(primary_key=True)
     value = CharField()
 
 
@@ -194,7 +193,7 @@ class WTFPeeweeTestCase(unittest.TestCase):
         
         # check that the options look right
         self.assertEqual(list(form.blog.iter_choices()), [
-            (self.blog_a.get_pk(), u'a', False), (self.blog_b.get_pk(), u'b', False)
+            (self.blog_a.get_id(), u'a', False), (self.blog_b.get_id(), u'b', False)
         ])
     
     def test_blog_form_with_obj(self):
@@ -214,7 +213,7 @@ class WTFPeeweeTestCase(unittest.TestCase):
         
         # check that the options look right
         self.assertEqual(list(form.blog.iter_choices()), [
-            (self.blog_a.get_pk(), u'a', True), (self.blog_b.get_pk(), u'b', False)
+            (self.blog_a.get_id(), u'a', True), (self.blog_b.get_id(), u'b', False)
         ])
     
     def test_blog_form_saving(self):
@@ -256,7 +255,7 @@ class WTFPeeweeTestCase(unittest.TestCase):
             'content': 'some content',
             'pub_date-date': '2011-02-01', 
             'pub_date-time': '00:00:00',
-            'blog': self.blog_b.get_pk(),
+            'blog': self.blog_b.get_id(),
         }))
         self.assertTrue(form.validate())
         
@@ -282,7 +281,7 @@ class WTFPeeweeTestCase(unittest.TestCase):
             'title': 'a1 edited',
             'content': 'a1 content',
             'pub_date': '2011-01-01 00:00:00',
-            'blog': self.blog_b.get_pk(),
+            'blog': self.blog_b.get_id(),
         }), obj=self.entry_a1)
         self.assertTrue(form.validate())
         
@@ -383,12 +382,12 @@ class WTFPeeweeTestCase(unittest.TestCase):
         form = TestEntryForm(FakePost({
             'title': 'new entry',
             'content': 'some content',
-            'blog': self.blog_b.get_pk(),
+            'blog': self.blog_b.get_id(),
         }))
         
         # check the htmlz for the form's hidden field
         html = form._fields['blog']()
-        self.assertEqual(html, u'<input id="blog" name="blog" type="hidden" value="%s">' % self.blog_b.get_pk())
+        self.assertEqual(html, u'<input id="blog" name="blog" type="hidden" value="%s">' % self.blog_b.get_id())
         
         self.assertTrue(form.validate())
         self.assertEqual(form.blog.data, self.blog_b)
@@ -411,12 +410,12 @@ class WTFPeeweeTestCase(unittest.TestCase):
         form = TestEntryForm(FakePost({
             'title': 'a1 edited',
             'content': 'a1 content',
-            'blog': self.blog_b.get_pk(),
+            'blog': self.blog_b.get_id(),
         }), obj=self.entry_a1)
         
         # check the htmlz for the form's hidden field
         html = form._fields['blog']()
-        self.assertEqual(html, u'<input id="blog" name="blog" type="hidden" value="%s">' % self.blog_b.get_pk())
+        self.assertEqual(html, u'<input id="blog" name="blog" type="hidden" value="%s">' % self.blog_b.get_id())
         
         self.assertTrue(form.validate())
         

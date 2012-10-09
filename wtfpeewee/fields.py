@@ -212,7 +212,7 @@ class SelectQueryField(fields.SelectFieldBase):
         self.allow_blank = allow_blank
         self.blank_text = blank_text or '----------------'
         self.query = query
-        self.model = query.model
+        self.model = query.model_class
         self._set_data(None)
 
         if get_label is None:
@@ -224,10 +224,8 @@ class SelectQueryField(fields.SelectFieldBase):
 
     def get_model(self, pk):
         try:
-            return self.query.get(**{
-                self.model._meta.pk_name: pk
-            })
-        except self.query.model.DoesNotExist:
+            return self.query.where(self.model._meta.primary_key==pk).get()
+        except self.model.DoesNotExist:
             pass
 
     def _get_data(self):
@@ -251,7 +249,7 @@ class SelectQueryField(fields.SelectFieldBase):
             yield (u'__None', self.blank_text, self.data is None)
 
         for obj in self.query.clone():
-            yield (obj.get_pk(), self.get_label(obj), obj == self.data)
+            yield (obj.get_id(), self.get_label(obj), obj == self.data)
 
     def process_formdata(self, valuelist):
         if valuelist:
@@ -263,7 +261,7 @@ class SelectQueryField(fields.SelectFieldBase):
 
     def pre_validate(self, form):
         if self.data is not None:
-            if not self.query.where(**{self.model._meta.pk_name: self.data.get_pk()}).exists():
+            if not self.query.where(self.model._meta.primary_key==self.data.get_id()).exists():
                 raise ValidationError(self.gettext('Not a valid choice'))
         elif not self.allow_blank:
             raise ValidationError(self.gettext('Selection cannot be blank'))
@@ -277,9 +275,7 @@ class SelectMultipleQueryField(SelectQueryField):
         super(SelectMultipleQueryField, self).__init__(*args, **kwargs)
 
     def get_model_list(self, pk_list):
-        return list(self.query.where(**{
-            '%s__in' % self.model._meta.pk_name: pk_list
-        }))
+        return list(self.query.where(self.model._meta.primary_key << pk_list))
 
     def _get_data(self):
         if self._formdata is not None:
@@ -299,7 +295,7 @@ class SelectMultipleQueryField(SelectQueryField):
 
     def iter_choices(self):
         for obj in self.query.clone():
-            yield (obj.get_pk(), self.get_label(obj), obj in self.data)
+            yield (obj.get_id(), self.get_label(obj), obj in self.data)
 
     def process_formdata(self, valuelist):
         if valuelist:
@@ -308,9 +304,8 @@ class SelectMultipleQueryField(SelectQueryField):
 
     def pre_validate(self, form):
         if self.data:
-            if not self.query.where(**{'%s__in' % self.model._meta.pk_name: [
-                model.get_pk() for model in self.data
-            ]}).count() == len(self.data):
+            id_list = [m.get_id() for m in self.data]
+            if not self.query.where(self.model._meta.primary_key << id_list).count() == len(id_list):
                 raise ValidationError(self.gettext('Not a valid choice'))
 
 
@@ -318,7 +313,7 @@ class HiddenQueryField(fields.HiddenField):
     def __init__(self, label=None, validators=None, query=None, get_label=None, **kwargs):
         super(fields.HiddenField, self).__init__(label, validators, **kwargs)
         self.query = query
-        self.model = query.model
+        self.model = query.model_class
         self._set_data(None)
 
         if get_label is None:
@@ -330,10 +325,8 @@ class HiddenQueryField(fields.HiddenField):
 
     def get_model(self, pk):
         try:
-            return self.query.get(**{
-                self.model._meta.pk_name: pk
-            })
-        except self.query.model.DoesNotExist:
+            return self.query.where(self.model._meta.primary_key==pk).get()
+        except self.model.DoesNotExist:
             pass
 
     def _get_data(self):
@@ -353,7 +346,7 @@ class HiddenQueryField(fields.HiddenField):
         return self.widget(self, **kwargs)
 
     def _value(self):
-        return self.data and self.data.get_pk()
+        return self.data and self.data.get_id()
 
     def process_formdata(self, valuelist):
         if valuelist:

@@ -11,7 +11,7 @@ from wtfpeewee.fields import ModelSelectField, SelectChoicesField, WPTimeField,\
 
 from peewee import PrimaryKeyField, IntegerField, FloatField, DateTimeField,\
     BooleanField, CharField, TextField, ForeignKeyField, DecimalField, DateField,\
-    TimeField, DoesNotExist, IntegerColumn, FloatColumn, DoubleColumn, DoubleField
+    TimeField, DoesNotExist, DoubleField
 
 
 __all__ = (
@@ -63,20 +63,8 @@ class ModelConverter(object):
         if field.choices is not None:
             field_obj = SelectQueryField(query=field.choices, **kwargs)
         else:
-            field_obj = ModelSelectField(model=field.to, **kwargs)
+            field_obj = ModelSelectField(model=field.rel_model, **kwargs)
         return field.name, field_obj
-
-    def handle_primary_key(self, model, field, **kwargs):
-        if field.column_class == IntegerColumn:
-            field_obj = f.IntegerField(**kwargs)
-        elif field.column_class in (FloatColumn, DoubleColumn):
-            field_obj = f.FloatField(**kwargs)
-        else:
-            field_obj = f.TextField(**kwargs)
-        return field.name, field_obj
-
-    def add_primary_key_handler(self):
-        self.converters.update({PrimaryKeyField: self.handle_primary_key})
 
     def convert(self, model, field, field_args):
         kwargs = dict(
@@ -126,8 +114,6 @@ def model_fields(model, allow_pk=False, only=None, exclude=None, field_args=None
 
     if not allow_pk:
         model_fields.pop(0)
-    else:
-        converter.add_primary_key_handler()
 
     if only:
         model_fields = (x for x in model_fields if x[0] in only)
