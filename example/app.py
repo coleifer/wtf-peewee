@@ -56,11 +56,11 @@ class Post(BaseModel):
     content = TextField()
     pub_date = DateTimeField(default=datetime.datetime.now)
 
-    def __unicode__(self):                                                                                                                                         
+    def __unicode__(self):
         return self.title
 
     class Meta:
-        ordering = (('pub_date', 'desc'),)
+        order_by = ('-pub_date',)
 
 
 class Comment(BaseModel):
@@ -70,13 +70,13 @@ class Comment(BaseModel):
     pub_date = DateTimeField(default=datetime.datetime.now)
     
     class Meta:
-        ordering = (('pub_date', 'desc'),)
+        order_by = ('pub_date',)
 
 
 # form classes
 class HiddenForeignKeyConverter(ModelConverter):
     def handle_foreign_key(self, model, field, **kwargs):
-        return field.name, ModelHiddenField(model=field.to, **kwargs)
+        return field.name, ModelHiddenField(model=field.rel_model, **kwargs)
 
 
 PostForm = model_form(Post, field_args={
@@ -86,21 +86,23 @@ PostForm = model_form(Post, field_args={
 CommentForm = model_form(Comment, exclude=('pub_date',), converter=HiddenForeignKeyConverter())
 
 
-def get_or_404(query, **kwargs):
+def get_or_404(query, *expr):
     try:
-        return query.get(**kwargs)
-    except query.model.DoesNotExist:
+        return query.where(*expr).get()
+    except query.model_class.DoesNotExist:
         abort(404)
 
 # views
 @app.route('/')
 def index():
-    posts = Post.select().join(Comment, 'left outer').annotate(Comment, Count('id', 'comment_count'))
+    posts = Post.select().join(
+        Comment, JOIN_LEFT_OUTER
+    ).switch(Post).annotate(Comment, fn.Count(Comment.id).alias('comment_count'))
     return render_template('posts/index.html', posts=posts)
 
 @app.route('/<id>/')
 def detail(id):
-    post = get_or_404(Post.select(), id=id)
+    post = get_or_404(Post.select(), Post.id == id)
     comment_form = CommentForm(post=post)
     return render_template('posts/detail.html', post=post, comment_form=comment_form)
 
@@ -122,7 +124,7 @@ def add():
 
 @app.route('/<id>/edit/', methods=['GET', 'POST'])
 def edit(id):
-    post = get_or_404(Post.select(), id=id)
+    post = get_or_404(Post.select(), Post.id == id)
     
     if request.method == 'POST':
         form = PostForm(request.form, obj=post)
