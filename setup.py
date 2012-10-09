@@ -3,7 +3,7 @@ from setuptools import setup
 
 setup(
     name='wtf-peewee',
-    version='0.1.5',
+    version='0.2.0',
     url='https://github.com/coleifer/wtf-peewee/',
     license='MIT',
     author='Charles Leifer',
@@ -13,7 +13,7 @@ setup(
     zip_safe=False,
     platforms='any',
     install_requires=[
-        'peewee<2.0.0', 'wtforms',
+        'peewee>=2.0.0', 'wtforms',
     ],
     classifiers=[
         'Environment :: Web Environment',
