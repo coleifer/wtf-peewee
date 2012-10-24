@@ -377,4 +377,5 @@ class ModelHiddenField(HiddenQueryField):
     queryset and lists everything in it.
     """
     def __init__(self, label=None, validators=None, model=None, **kwargs):
+        kwargs.pop('allow_blank', None)
         super(ModelHiddenField, self).__init__(label, validators, query=model.select(), **kwargs)
