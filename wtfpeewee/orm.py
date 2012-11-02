@@ -79,7 +79,8 @@ class ModelConverter(object):
 
         if field.null:
             kwargs['filters'].append(handle_null_filter)
-        elif field.default is not None:
+
+        if field.null or field.default is not None:
             kwargs['validators'].append(validators.Optional())
         else:
             if isinstance(field, self.required):
