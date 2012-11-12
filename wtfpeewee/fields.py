@@ -127,8 +127,10 @@ class WPDateTimeField(FormField):
 
     @property
     def data(self):
-        if self.date.data is not None and self.time.data is not None:
-            return datetime.datetime.combine(self.date.data, self.time.data)
+        date_data = self.date.data
+        time_data = self.time.data or datetime.time(0, 0)
+        if date_data:
+            return datetime.datetime.combine(date_data, time_data)
 
 
 class ChosenSelectWidget(widgets.Select):
