@@ -91,6 +91,8 @@ class ModelConverter(object):
         if field_class in self.converters:
             return self.converters[field_class](model, field, **kwargs)
         elif field_class in self.defaults:
+            if issubclass(self.defaults[field_class], f.FormField):
+                kwargs.pop('filters')
             if field.choices or 'choices' in kwargs:
                 choices = kwargs.pop('choices', field.choices)
                 if field_class in self.coerce_settings or 'coerce' in kwargs:
