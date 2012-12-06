@@ -277,7 +277,9 @@ class SelectMultipleQueryField(SelectQueryField):
         super(SelectMultipleQueryField, self).__init__(*args, **kwargs)
 
     def get_model_list(self, pk_list):
-        return list(self.query.where(self.model._meta.primary_key << pk_list))
+        if pk_list:
+            return list(self.query.where(self.model._meta.primary_key << pk_list))
+        return []
 
     def _get_data(self):
         if self._formdata is not None:
@@ -307,7 +309,7 @@ class SelectMultipleQueryField(SelectQueryField):
     def pre_validate(self, form):
         if self.data:
             id_list = [m.get_id() for m in self.data]
-            if not self.query.where(self.model._meta.primary_key << id_list).count() == len(id_list):
+            if id_list and not self.query.where(self.model._meta.primary_key << id_list).count() == len(id_list):
                 raise ValidationError(self.gettext('Not a valid choice'))
 
 
