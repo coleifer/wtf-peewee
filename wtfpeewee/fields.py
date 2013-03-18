@@ -315,6 +315,7 @@ class SelectMultipleQueryField(SelectQueryField):
 
 class HiddenQueryField(fields.HiddenField):
     def __init__(self, label=None, validators=None, query=None, get_label=None, **kwargs):
+        self.allow_blank = kwargs.pop('allow_blank', False)
         super(fields.HiddenField, self).__init__(label, validators, **kwargs)
         self.query = query
         self.model = query.model_class
@@ -381,5 +382,4 @@ class ModelHiddenField(HiddenQueryField):
     queryset and lists everything in it.
     """
     def __init__(self, label=None, validators=None, model=None, **kwargs):
-        kwargs.pop('allow_blank', None)
         super(ModelHiddenField, self).__init__(label, validators, query=model.select(), **kwargs)
