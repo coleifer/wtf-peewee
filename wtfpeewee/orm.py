@@ -103,6 +103,8 @@ class ModelConverter(object):
 
             return field.name, self.defaults[field_class](**kwargs)
 
+        raise AttributeError('There is not possible conversion for \'%s\'' % type(field))
+
 
 def model_fields(model, allow_pk=False, only=None, exclude=None, field_args=None, converter=None):
     """
