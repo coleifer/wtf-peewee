@@ -354,9 +354,12 @@ class HiddenQueryField(fields.HiddenField):
         return self.data and self.data.get_id()
 
     def process_formdata(self, valuelist):
-        if valuelist:
+        if valuelist and valuelist[0] != 'None':
             self._data = None
             self._formdata = int(valuelist[0])
+        else:
+            self._data = None
+            self._formdata = None
 
 
 class ModelSelectField(SelectQueryField):
