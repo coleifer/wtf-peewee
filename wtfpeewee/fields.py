@@ -54,10 +54,7 @@ class BooleanSelectField(fields.SelectFieldBase):
 
 class WPTimeField(StaticAttributesMixin, fields.TextField):
     attributes = {'class': 'time-widget'}
-
-    def __init__(self, label=None, validators=None, format='%H:%M:%S', **kwargs):
-        super(WPTimeField, self).__init__(label, validators, **kwargs)
-        self.format = format
+    formats = ['%H:%M:%S', '%H:%M']
 
     def _value(self):
         if self.raw_data:
@@ -65,17 +62,18 @@ class WPTimeField(StaticAttributesMixin, fields.TextField):
         else:
             return self.data and self.data.strftime(self.format) or u''
 
+    def convert(self, time_str):
+        for format in self.formats:
+            try:
+                return datetime.datetime.strptime(time_str, format).time()
+            except ValueError:
+                pass
+
     def process_formdata(self, valuelist):
         if valuelist:
-            date_str = u' '.join(valuelist)
-            try:
-                self.data = datetime.datetime.strptime(date_str, self.format).time()
-            except ValueError:
-                try:
-                    self.data = datetime.datetime.strptime(date_str, '%H:%M').time()
-                except ValueError:
-                    self.data = None
-                    raise ValueError(self.gettext(u'Not a valid time value'))
+            self.data = self.convert(' '.join(valuelist))
+            if self.data is None:
+                raise ValueError(self.gettext(u'Not a valid time value'))
 
 
 class WPDateField(StaticAttributesMixin, fields.DateField):
@@ -351,12 +349,13 @@ class HiddenQueryField(fields.HiddenField):
         return self.widget(self, **kwargs)
 
     def _value(self):
-        return self.data and self.data.get_id()
+        return self.data and self.data.get_id() or ''
 
     def process_formdata(self, valuelist):
         if valuelist:
+            model_id = valuelist[0]
             self._data = None
-            self._formdata = int(valuelist[0])
+            self._formdata = model_id or None
 
 
 class ModelSelectField(SelectQueryField):
