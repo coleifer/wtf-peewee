@@ -60,7 +60,7 @@ class WPTimeField(StaticAttributesMixin, fields.TextField):
         if self.raw_data:
             return u' '.join(self.raw_data)
         else:
-            return self.data and self.data.strftime(self.format) or u''
+            return self.data and self.data.strftime(self.formats[0]) or u''
 
     def convert(self, time_str):
         for format in self.formats:
@@ -90,20 +90,20 @@ def datetime_widget(field, **kwargs):
     return HTMLString(u''.join(html))
 
 
-class _DateTimeForm(form.Form):
-    date = WPDateField()
-    time = WPTimeField()
+def generate_datetime_form(validators=None):
+    class _DateTimeForm(form.Form):
+        date = WPDateField(validators=validators)
+        time = WPTimeField(validators=validators)
+    return _DateTimeForm
 
 
 class WPDateTimeField(FormField):
     widget = staticmethod(datetime_widget)
 
     def __init__(self, label='', validators=None, **kwargs):
-        validators = None
+        DynamicForm = generate_datetime_form(validators)
         super(WPDateTimeField, self).__init__(
-            _DateTimeForm, label, validators,
-            **kwargs
-        )
+            DynamicForm, label, validators=None, **kwargs)
 
     def process(self, formdata, data=_unset_value):
         prefix = self.name + self.separator
