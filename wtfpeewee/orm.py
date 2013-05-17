@@ -159,8 +159,8 @@ def model_fields(model, allow_pk=False, only=None, exclude=None,
 
     field_dict = {}
     for name, model_field in model_fields:
-        info = converter.convert(model, model_field, field_args.get(name))
-        field_dict[info.name] = info.field
+        name, field = converter.convert(model, model_field, field_args.get(name))
+        field_dict[name] = field
 
     return field_dict
 
