@@ -14,6 +14,7 @@ from wtfpeewee.fields import WPDateField
 from wtfpeewee.fields import WPDateTimeField
 from wtfpeewee.fields import WPTimeField
 
+from peewee import BigIntegerField
 from peewee import BlobField
 from peewee import BooleanField
 from peewee import CharField
@@ -45,6 +46,7 @@ FieldInfo = namedtuple('FieldInfo', ('name', 'field'))
 
 class ModelConverter(object):
     defaults = {
+        BigIntegerField: f.IntegerField,
         BlobField: f.TextAreaField,
         BooleanField: f.BooleanField,
         CharField: f.TextField,
@@ -59,9 +61,11 @@ class ModelConverter(object):
         TimeField: WPTimeField,
     }
     coerce_defaults = {
-        IntegerField: int,
-        FloatField: float,
+        BigIntegerField: int,
         CharField: unicode,
+        DoubleField: float,
+        FloatField: float,
+        IntegerField: int,
         TextField: unicode,
     }
     required = (
