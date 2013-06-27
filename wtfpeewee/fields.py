@@ -334,7 +334,10 @@ class HiddenQueryField(fields.HiddenField):
 
     def _get_data(self):
         if self._formdata is not None:
-            self._set_data(self.get_model(self._formdata))
+            if self.allow_blank and self._formdata == '__None':
+                self._set_data(None)
+            else:
+                self._set_data(self.get_model(self._formdata))
         return self._data
 
     def _set_data(self, data):
