@@ -13,6 +13,7 @@ from wtfpeewee.fields import SelectChoicesField
 from wtfpeewee.fields import WPDateField
 from wtfpeewee.fields import WPDateTimeField
 from wtfpeewee.fields import WPTimeField
+import six
 
 from peewee import BigIntegerField
 from peewee import BlobField
@@ -62,11 +63,11 @@ class ModelConverter(object):
     }
     coerce_defaults = {
         BigIntegerField: int,
-        CharField: unicode,
+        CharField: six.text_type,
         DoubleField: float,
         FloatField: float,
         IntegerField: int,
-        TextField: unicode,
+        TextField: six.text_type,
     }
     required = (
         CharField,
