@@ -303,7 +303,7 @@ class SelectMultipleQueryField(SelectQueryField):
     def process_formdata(self, valuelist):
         if valuelist:
             self._data = []
-            self._formdata = map(int, valuelist)
+            self._formdata = list(map(int, valuelist))
 
     def pre_validate(self, form):
         if self.data:
