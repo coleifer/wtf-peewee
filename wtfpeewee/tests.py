@@ -6,6 +6,16 @@ from wtforms import fields as wtfields
 from wtforms.form import Form as WTForm
 from wtfpeewee.fields import *
 from wtfpeewee.orm import model_form
+from wtfpeewee._compat import PY2
+
+
+if not PY2:
+    implements_to_string = lambda x: x
+else:
+    def implements_to_string(cls):
+        cls.__unicode__ = cls.__str__
+        cls.__str__ = lambda x: x.__unicode__().encode('utf-8')
+        return cls
 
 
 test_db = SqliteDatabase(':memory:')
@@ -15,13 +25,15 @@ class TestModel(Model):
         database = test_db
 
 
+@implements_to_string
 class Blog(TestModel):
     title = CharField()
 
-    def __unicode__(self):
+    def __str__(self):
         return self.title
 
 
+@implements_to_string
 class Entry(TestModel):
     pk = PrimaryKeyField()
     blog = ForeignKeyField(Blog)
@@ -29,7 +41,7 @@ class Entry(TestModel):
     content = TextField()
     pub_date = DateTimeField(default=datetime.datetime.now)
 
-    def __unicode__(self):
+    def __str__(self):
         return '%s: %s' % (self.blog.title, self.title)
 
 
@@ -174,7 +186,7 @@ class WTFPeeweeTestCase(unittest.TestCase):
 
     def test_blog_form(self):
         form = BlogForm()
-        self.assertEqual(form._fields.keys(), ['title'])
+        self.assertEqual(list(form._fields.keys()), ['title'])
         self.assertTrue(isinstance(form.title, wtfields.TextField))
         self.assertEqual(form.data, {'title': None})
 
