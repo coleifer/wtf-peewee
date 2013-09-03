@@ -2,14 +2,14 @@ import datetime
 import unittest
 
 from peewee import *
-import six
 from wtforms import fields as wtfields
 from wtforms.form import Form as WTForm
 from wtfpeewee.fields import *
 from wtfpeewee.orm import model_form
+from wtfpeewee._compat import PY2
 
 
-if six.PY3:
+if not PY2:
     implements_to_string = lambda x: x
 else:
     def implements_to_string(cls):

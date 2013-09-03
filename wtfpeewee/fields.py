@@ -6,12 +6,11 @@ import datetime
 import operator
 import warnings
 
-import six
 from wtforms import fields, form, widgets
 from wtforms.fields import FormField, _unset_value
 from wtforms.validators import ValidationError
 from wtforms.widgets import HTMLString, html_params
-
+from wtfpeewee._compat import text_type
 
 __all__ = (
     'ModelSelectField', 'ModelSelectMultipleField', 'ModelHiddenField',
@@ -151,7 +150,7 @@ class SelectChoicesField(fields.SelectField):
     widget = ChosenSelectWidget()
 
     # all of this exists so i can get proper handling of None
-    def __init__(self, label=None, validators=None, coerce=six.text_type, choices=None, allow_blank=False, blank_text=u'', **kwargs):
+    def __init__(self, label=None, validators=None, coerce=text_type, choices=None, allow_blank=False, blank_text=u'', **kwargs):
         super(SelectChoicesField, self).__init__(label, validators, coerce, choices, **kwargs)
         self.allow_blank = allow_blank
         self.blank_text = blank_text or '----------------'
@@ -217,7 +216,7 @@ class SelectQueryField(fields.SelectFieldBase):
         self._set_data(None)
 
         if get_label is None:
-            self.get_label = lambda o: six.text_type(o)
+            self.get_label = lambda o: text_type(o)
         elif isinstance(get_label, basestring):
             self.get_label = operator.attrgetter(get_label)
         else:
@@ -321,7 +320,7 @@ class HiddenQueryField(fields.HiddenField):
         self._set_data(None)
 
         if get_label is None:
-            self.get_label = lambda o: six.text_type(o)
+            self.get_label = lambda o: text_type(o)
         elif isinstance(get_label, basestring):
             self.get_label = operator.attrgetter(get_label)
         else:
