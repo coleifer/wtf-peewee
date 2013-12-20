@@ -3,13 +3,12 @@ Tools for generating forms based on Peewee models
 (cribbed from wtforms.ext.django)
 """
 from collections import namedtuple
-from decimal import Decimal
 from wtforms import Form
 from wtforms import fields as f
-from wtforms import ValidationError
 from wtforms import validators
 from wtfpeewee.fields import ModelSelectField
 from wtfpeewee.fields import SelectChoicesField
+from wtfpeewee.fields import SelectQueryField
 from wtfpeewee.fields import WPDateField
 from wtfpeewee.fields import WPDateTimeField
 from wtfpeewee.fields import WPTimeField
@@ -22,7 +21,6 @@ from peewee import CharField
 from peewee import DateField
 from peewee import DateTimeField
 from peewee import DecimalField
-from peewee import DoesNotExist
 from peewee import DoubleField
 from peewee import FloatField
 from peewee import ForeignKeyField
