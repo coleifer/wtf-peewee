@@ -2,6 +2,7 @@
 Tools for generating forms based on Peewee models
 (cribbed from wtforms.ext.django)
 """
+
 from collections import namedtuple
 from wtforms import Form
 from wtforms import fields as f
@@ -74,7 +75,7 @@ class ModelConverter(object):
         PrimaryKeyField,
         TextField)
 
-    def __init__(self, additional=None, additional_coerce=None):
+    def __init__(self, additional=None, additional_coerce=None, overrides=None):
         self.converters = {ForeignKeyField: self.handle_foreign_key}
         if additional:
             self.converters.update(additional)
@@ -82,6 +83,8 @@ class ModelConverter(object):
         self.coerce_settings = dict(self.coerce_defaults)
         if additional_coerce:
             self.coerce_settings.update(additional_coerce)
+            
+        self.overrides = overrides or {}
 
     def handle_foreign_key(self, model, field, **kwargs):
         if field.null:
@@ -113,6 +116,9 @@ class ModelConverter(object):
         else:
             if isinstance(field, self.required):
                 kwargs['validators'].append(validators.Required())
+
+        if field.name in self.overrides:
+            return FieldInfo(field.name, self.overrides[field.name](**kwargs))
 
         field_class = type(field)
         if field_class in self.converters:
