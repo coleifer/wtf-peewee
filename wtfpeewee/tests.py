@@ -345,7 +345,9 @@ class WTFPeeweeTestCase(unittest.TestCase):
 
         # again, this is for the purposes of documenting behavior -- nullable
         # booleanfields won't work without a custom field class
-        self.assertEqual(nfm.b, True)
+        # Passing an empty string will evalute to False
+        # https://bitbucket.org/simplecodes/wtforms/commits/35c5f7182b7f0c62a4d4db7a1ec8719779b4b018
+        self.assertEqual(nfm.b, False)
 
         form = NullFieldsModelForm(FakePost({'c': 'test'}))
         self.assertTrue(form.validate())
