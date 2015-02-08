@@ -95,7 +95,7 @@ class ModelConverter(object):
             field_obj = ModelSelectField(model=field.rel_model, **kwargs)
         return FieldInfo(field.name, field_obj)
 
-    def convert(self, model, field, field_args):
+    def convert(self, model, field, field_args, field_name):
         kwargs = {
             'label': field.verbose_name,
             'validators': [],
@@ -117,8 +117,8 @@ class ModelConverter(object):
             if isinstance(field, self.required):
                 kwargs['validators'].append(validators.Required())
 
-        if field.name in self.overrides:
-            return FieldInfo(field.name, self.overrides[field.name](**kwargs))
+        if field_name in self.overrides:
+            return FieldInfo(field_name, self.overrides[field_name](**kwargs))
 
         field_class = type(field)
         if field_class in self.converters:
@@ -141,7 +141,7 @@ class ModelConverter(object):
 
                     return FieldInfo(field.name, SelectChoicesField(**kwargs))
 
-            return FieldInfo(field.name, self.defaults[field_class](**kwargs))
+            return FieldInfo(field_name, self.defaults[field_class](**kwargs))
 
         raise AttributeError("There is not possible conversion "
                              "for '%s'" % field_class)
@@ -168,7 +168,7 @@ def model_fields(model, allow_pk=False, only=None, exclude=None,
 
     field_dict = {}
     for name, model_field in model_fields:
-        name, field = converter.convert(model, model_field, field_args.get(name))
+        name, field = converter.convert(model, model_field, field_args.get(name), name)
         field_dict[name] = field
 
     return field_dict
