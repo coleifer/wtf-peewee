@@ -120,31 +120,33 @@ class ModelConverter(object):
         if field.name in self.overrides:
             return FieldInfo(field.name, self.overrides[field.name](**kwargs))
 
-        field_class = type(field)
-        if field_class in self.converters:
-            return self.converters[field_class](model, field, **kwargs)
-        elif field_class in self.defaults:
-            if issubclass(self.defaults[field_class], f.FormField):
-                # FormField fields (i.e. for nested forms) do not support
-                # filters.
-                kwargs.pop('filters')
-            if field.choices or 'choices' in kwargs:
-                choices = kwargs.pop('choices', field.choices)
-                if field_class in self.coerce_settings or 'coerce' in kwargs:
-                    coerce_fn = kwargs.pop('coerce',
-                                           self.coerce_settings[field_class])
-                    allow_blank = kwargs.pop('allow_blank', field.null)
-                    kwargs.update({
-                        'choices': choices,
-                        'coerce': coerce_fn,
-                        'allow_blank': allow_blank})
+        for converter in self.converters:
+            if isinstance(field, converter):
+                return self.converters[converter](model, field, **kwargs)
+        else:
+            for converter in self.defaults:
+                if isinstance(field, converter):
+                    if issubclass(self.defaults[converter], f.FormField):
+                        # FormField fields (i.e. for nested forms) do not support
+                        # filters.
+                        kwargs.pop('filters')
+                    if field.choices or 'choices' in kwargs:
+                        choices = kwargs.pop('choices', field.choices)
+                        if converter in self.coerce_settings or 'coerce' in kwargs:
+                            coerce_fn = kwargs.pop('coerce',
+                                                   self.coerce_settings[converter])
+                            allow_blank = kwargs.pop('allow_blank', field.null)
+                            kwargs.update({
+                                'choices': choices,
+                                'coerce': coerce_fn,
+                                'allow_blank': allow_blank})
 
-                    return FieldInfo(field.name, SelectChoicesField(**kwargs))
+                            return FieldInfo(field.name, SelectChoicesField(**kwargs))
 
-            return FieldInfo(field.name, self.defaults[field_class](**kwargs))
+                    return FieldInfo(field.name, self.defaults[converter](**kwargs))
 
         raise AttributeError("There is not possible conversion "
-                             "for '%s'" % field_class)
+                             "for '%s'" % type(field))
 
 
 def model_fields(model, allow_pk=False, only=None, exclude=None,
