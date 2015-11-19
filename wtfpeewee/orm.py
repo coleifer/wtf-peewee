@@ -16,6 +16,7 @@ from wtfpeewee.fields import WPDateTimeField
 from wtfpeewee.fields import WPTimeField
 from wtfpeewee._compat import text_type
 
+from peewee import BareField
 from peewee import BigIntegerField
 from peewee import BlobField
 from peewee import BooleanField
@@ -47,6 +48,7 @@ FieldInfo = namedtuple('FieldInfo', ('name', 'field'))
 
 class ModelConverter(object):
     defaults = {
+        BareField: f.TextField,
         BigIntegerField: f.IntegerField,
         BlobField: f.TextAreaField,
         BooleanField: f.BooleanField,
@@ -84,7 +86,7 @@ class ModelConverter(object):
         self.coerce_settings = dict(self.coerce_defaults)
         if additional_coerce:
             self.coerce_settings.update(additional_coerce)
-            
+
         self.overrides = overrides or {}
 
     def handle_foreign_key(self, model, field, **kwargs):
