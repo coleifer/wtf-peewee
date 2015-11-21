@@ -162,7 +162,7 @@ def model_fields(model, allow_pk=False, only=None, exclude=None,
     converter = converter or ModelConverter()
     field_args = field_args or {}
 
-    model_fields = list(model._meta.get_sorted_fields())
+    model_fields = list(model._meta.sorted_fields)
     if not allow_pk:
         model_fields.pop(0)
 
