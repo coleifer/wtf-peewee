@@ -1,4 +1,5 @@
 import datetime
+import sys
 import unittest
 
 from peewee import *
@@ -487,3 +488,7 @@ class WTFPeeweeTestCase(unittest.TestCase):
         self.assertEqual(html, u'<input id="blog" name="blog" type="hidden" value="">')
 
         self.assertTrue(form.validate())
+
+
+if __name__ == '__main__':
+    unittest.main(argv=sys.argv)
