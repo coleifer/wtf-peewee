@@ -217,7 +217,7 @@ class SelectQueryField(fields.SelectFieldBase):
 
         if get_label is None:
             self.get_label = lambda o: text_type(o)
-        elif isinstance(get_label, basestring):
+        elif isinstance(get_label, str):
             self.get_label = operator.attrgetter(get_label)
         else:
             self.get_label = get_label
