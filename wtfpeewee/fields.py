@@ -10,7 +10,7 @@ from wtforms import fields, form, widgets
 from wtforms.fields import FormField, _unset_value
 from wtforms.validators import ValidationError
 from wtforms.widgets import HTMLString, html_params
-from wtfpeewee._compat import text_type
+from wtfpeewee._compat import text_type, string_types
 
 __all__ = (
     'ModelSelectField', 'ModelSelectMultipleField', 'ModelHiddenField',
@@ -217,7 +217,7 @@ class SelectQueryField(fields.SelectFieldBase):
 
         if get_label is None:
             self.get_label = lambda o: text_type(o)
-        elif isinstance(get_label, basestring):
+        elif isinstance(get_label, string_types):
             self.get_label = operator.attrgetter(get_label)
         else:
             self.get_label = get_label
