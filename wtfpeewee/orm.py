@@ -4,7 +4,6 @@ Tools for generating forms based on Peewee models
 """
 
 from collections import namedtuple
-from copy import deepcopy
 from wtforms import Form
 from wtforms import fields as f
 from wtforms import validators
@@ -106,7 +105,7 @@ class ModelConverter(object):
             'default': field.default,
             'description': field.help_text}
         if field_args:
-            kwargs.update(deepcopy(field_args))
+            kwargs.update(dict(field_args))
 
         if field.null:
             # Treat empty string as None when converting.
