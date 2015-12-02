@@ -5,6 +5,7 @@ import unittest
 from peewee import *
 from wtforms import fields as wtfields
 from wtforms.form import Form as WTForm
+from wtforms.validators import Regexp
 from wtfpeewee.fields import *
 from wtfpeewee.orm import model_form
 from wtfpeewee._compat import PY2
@@ -110,6 +111,25 @@ class WTFPeeweeTestCase(unittest.TestCase):
 
         form = BlogFormDef(obj=self.blog_a)
         self.assertEqual(form.data, {'title': 'a'})
+
+    def test_duplicate_validators(self):
+        ''' Test whether validators are duplicated when forms share field_args
+        '''
+        shared_field_args = {'id': {'validators': [Regexp('test')]}}
+
+        ValueIncludedForm = model_form(NonIntPKModel,
+                                       field_args=shared_field_args,
+                                       allow_pk=True)
+        ValueExcludedForm = model_form(NonIntPKModel,
+                                       field_args=shared_field_args,
+                                       allow_pk=True,
+                                       exclude=['value'])
+
+        value_included_form = ValueIncludedForm()
+        self.assertEqual(len(value_included_form.id.validators), 2)
+
+        value_excluded_form = ValueExcludedForm()
+        self.assertEqual(len(value_excluded_form.id.validators), 2)
 
     def test_non_int_pk(self):
         form = NonIntPKForm()
