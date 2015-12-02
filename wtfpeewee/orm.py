@@ -105,7 +105,11 @@ class ModelConverter(object):
             'default': field.default,
             'description': field.help_text}
         if field_args:
-            kwargs.update(dict(field_args))
+            kwargs.update(field_args)
+
+        if kwargs['validators']:
+            # Create a copy of the list since we will be modifying it.
+            kwargs['validators'] = list(kwargs['validators'])
 
         if field.null:
             # Treat empty string as None when converting.
