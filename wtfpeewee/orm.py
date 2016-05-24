@@ -30,6 +30,7 @@ from peewee import IntegerField
 from peewee import PrimaryKeyField
 from peewee import TextField
 from peewee import TimeField
+from peewee import TimestampField
 
 
 __all__ = (
@@ -61,6 +62,7 @@ class ModelConverter(object):
         PrimaryKeyField: f.HiddenField,
         TextField: f.TextAreaField,
         TimeField: WPTimeField,
+        TimestampField: WPDateTimeField,
     }
     coerce_defaults = {
         BigIntegerField: int,
