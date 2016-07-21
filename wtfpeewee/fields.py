@@ -5,6 +5,7 @@ Useful form fields for use with the Peewee ORM.
 import datetime
 import operator
 import warnings
+import json
 
 try:
     from markupsafe import Markup
@@ -24,7 +25,7 @@ __all__ = (
     'ModelSelectField', 'ModelSelectMultipleField', 'ModelHiddenField',
     'SelectQueryField', 'SelectMultipleQueryField', 'HiddenQueryField',
     'SelectChoicesField', 'BooleanSelectField', 'WPTimeField', 'WPDateField',
-    'WPDateTimeField',
+    'WPDateTimeField', 'WPJSONAreaField',
 )
 
 
@@ -66,6 +67,29 @@ class BooleanSelectField(fields.SelectFieldBase):
                 self.data = bool(valuelist[0])
             except ValueError:
                 raise ValueError(self.gettext(u'Invalid Choice: could not coerce'))
+
+
+class WPJSONAreaField(fields.TextAreaField):
+    def _value(self):
+        return json.dumps(self.data) if self.data is not None else u''
+
+    def process_formdata(self, valuelist):
+        # the empty string is not valid JSON, try setting to NULL
+        if not valuelist or not valuelist[0]:
+            self.data = None
+            return
+
+        try:
+            self.data = json.loads(valuelist[0])
+        except ValueError as e:
+            try:
+                # since Python 3.5, json.loads returns a JSONDecodeError which is a
+                # subclass of ValueError with additional attributes
+                raise ValueError(self.gettext(('Not a valid JSON structure: '
+                                               'parser error in line {e.lineno}, '
+                                               'column {e.colno}, char {e.pos}')).format(e=e))
+            except AttributeError:
+                raise ValueError(self.gettext((u'Not a valid JSON structure')))
 
 
 class WPTimeField(StaticAttributesMixin, fields.StringField):
