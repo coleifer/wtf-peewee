@@ -1,8 +1,12 @@
 import datetime
 import sys
 import unittest
+import json
 
 from peewee import *
+from playhouse.postgres_ext import BinaryJSONField as PostgresBinaryJSONField
+from playhouse.postgres_ext import JSONField as PostgresJSONField
+from playhouse.sqlite_ext import JSONField as SQLiteJSONField
 from wtforms import fields as wtfields
 from wtforms.form import Form as WTForm
 from wtforms.validators import Regexp
@@ -68,11 +72,21 @@ class NonIntPKModel(TestModel):
     value = CharField()
 
 
+class PostgresJSONModel(TestModel):
+    content = PostgresBinaryJSONField(null=True)
+
+
+class SQLiteJSONModel(TestModel):
+    content = SQLiteJSONField(null=True)
+
+
 BlogForm = model_form(Blog)
 EntryForm = model_form(Entry)
 NullFieldsModelForm = model_form(NullFieldsModel)
 ChoicesForm = model_form(ChoicesModel, field_args={'salutation': {'choices': (('mr', 'Mr.'), ('mrs', 'Mrs.'))}})
 NonIntPKForm = model_form(NonIntPKModel, allow_pk=True)
+PostgresJSONForm = model_form(PostgresJSONModel)
+SQLiteJSONForm = model_form(SQLiteJSONModel)
 
 class FakePost(dict):
     def getlist(self, key):
@@ -89,12 +103,14 @@ class WTFPeeweeTestCase(unittest.TestCase):
         Blog.drop_table(True)
         NullFieldsModel.drop_table(True)
         NonIntPKModel.drop_table(True)
+        SQLiteJSONModel.drop_table(True)
 
         Blog.create_table()
         Entry.create_table()
         NullEntry.create_table()
         NullFieldsModel.create_table()
         NonIntPKModel.create_table()
+        SQLiteJSONModel.create_table()
 
         self.blog_a = Blog.create(title='a')
         self.blog_b = Blog.create(title='b')
@@ -508,6 +524,78 @@ class WTFPeeweeTestCase(unittest.TestCase):
         self.assertEqual(html, u'<input id="blog" name="blog" type="hidden" value="">')
 
         self.assertTrue(form.validate())
+
+    def test_postgres_json_field(self):
+        form = PostgresJSONForm()
+        self.assertTrue(isinstance(form.content, WPJSONAreaField))
+
+        # test empty string
+        form = PostgresJSONForm(FakePost({
+            'content': '',
+        }))
+
+        self.assertTrue(form.validate())
+        self.assertEqual(form.content.data, None)
+
+        # test None content
+        form = PostgresJSONForm(FakePost({
+            'content': None,
+        }))
+
+        self.assertTrue(form.validate())
+        self.assertEqual(form.content.data, None)
+
+        # test simple empty array
+        form = PostgresJSONForm(FakePost({
+            'content': '[]',
+        }))
+
+        self.assertTrue(form.validate())
+        self.assertEqual(form.content.data, [])
+
+        # test more complex valid json object
+        teststruct = {'arr': [2.7183, 3.1416, 42], 'str': 'the answer'}
+
+        form = PostgresJSONForm(FakePost({
+            'content': json.dumps(teststruct),
+        }))
+
+        self.assertTrue(form.validate())
+        self.assertEqual(form.content.data, teststruct)
+
+        # test invalid json string
+        form = PostgresJSONForm(FakePost({
+            'content': 'somerandomstringwithoutquotes'
+        }))
+
+        self.assertFalse(form.validate())
+        self.assertEqual(form.content.data, None)
+
+        # test invalid json string (syntax error)
+        form = PostgresJSONForm(FakePost({
+            'content': '{"str": "the answer", }'
+        }))
+
+        self.assertFalse(form.validate())
+        self.assertEqual(form.content.data, None)
+
+    def test_sqlite_json_field(self):
+        # most of the form tests are done in test_postgres_json_field
+        # here we check the string generated when loading from the database
+
+        teststruct = {'arr': [2.7183, 3.1416, 42], 'str': 'the answer'}
+        teststring = json.dumps(teststruct)
+
+        entry = SQLiteJSONModel.create(content=teststruct)
+        form = SQLiteJSONForm(obj=entry)
+
+        self.assertTrue(isinstance(form.content, WPJSONAreaField))
+        self.assertTrue(form.validate())
+        self.assertEqual(form.content.data, teststruct)
+
+        html = form._fields['content']()
+        self.assertEqual(html,
+                         u'<textarea id="content" name="content">{}</textarea>'.format(teststring))
 
 
 if __name__ == '__main__':
