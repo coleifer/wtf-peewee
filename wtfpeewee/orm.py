@@ -128,30 +128,40 @@ class ModelConverter(object):
         if field.name in self.overrides:
             return FieldInfo(field.name, self.overrides[field.name](**kwargs))
 
+        # Allow custom-defined Peewee field classes to define their own conversion,
+        # making it so that code which calls model_form() doesn't have to have special
+        # cases, especially when called for the same peewee.Model from multiple places, or
+        # when called in a generic context which the end-developer has less control over,
+        # such as via flask-admin.
+        if hasattr(field, 'wtf_field'):
+            return FieldInfo(field.name, field.wtf_field(model, **kwargs))
+
         for converter in self.converters:
             if isinstance(field, converter):
                 return self.converters[converter](model, field, **kwargs)
         else:
             for converter in self.defaults:
-                if isinstance(field, converter):
-                    if issubclass(self.defaults[converter], f.FormField):
-                        # FormField fields (i.e. for nested forms) do not support
-                        # filters.
-                        kwargs.pop('filters')
-                    if field.choices or 'choices' in kwargs:
-                        choices = kwargs.pop('choices', field.choices)
-                        if converter in self.coerce_settings or 'coerce' in kwargs:
-                            coerce_fn = kwargs.pop('coerce',
-                                                   self.coerce_settings[converter])
-                            allow_blank = kwargs.pop('allow_blank', field.null)
-                            kwargs.update({
-                                'choices': choices,
-                                'coerce': coerce_fn,
-                                'allow_blank': allow_blank})
+                if not isinstance(field, converter):
+                    # Early-continue because it simplifies reading the following code.
+                    continue
+                if issubclass(self.defaults[converter], f.FormField):
+                    # FormField fields (i.e. for nested forms) do not support
+                    # filters.
+                    kwargs.pop('filters')
+                if field.choices or 'choices' in kwargs:
+                    choices = kwargs.pop('choices', field.choices)
+                    if converter in self.coerce_settings or 'coerce' in kwargs:
+                        coerce_fn = kwargs.pop('coerce',
+                                               self.coerce_settings[converter])
+                        allow_blank = kwargs.pop('allow_blank', field.null)
+                        kwargs.update({
+                            'choices': choices,
+                            'coerce': coerce_fn,
+                            'allow_blank': allow_blank})
 
-                            return FieldInfo(field.name, SelectChoicesField(**kwargs))
+                        return FieldInfo(field.name, SelectChoicesField(**kwargs))
 
-                    return FieldInfo(field.name, self.defaults[converter](**kwargs))
+                return FieldInfo(field.name, self.defaults[converter](**kwargs))
 
         raise AttributeError("There is not possible conversion "
                              "for '%s'" % type(field))
