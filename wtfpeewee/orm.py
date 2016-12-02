@@ -15,6 +15,7 @@ from wtfpeewee.fields import WPDateTimeField
 from wtfpeewee.fields import WPTimeField
 from wtfpeewee._compat import text_type
 
+from peewee import BareField
 from peewee import BigIntegerField
 from peewee import BlobField
 from peewee import BooleanField
@@ -29,6 +30,7 @@ from peewee import IntegerField
 from peewee import PrimaryKeyField
 from peewee import TextField
 from peewee import TimeField
+from peewee import TimestampField
 
 
 __all__ = (
@@ -46,6 +48,7 @@ FieldInfo = namedtuple('FieldInfo', ('name', 'field'))
 
 class ModelConverter(object):
     defaults = {
+        BareField: f.TextField,
         BigIntegerField: f.IntegerField,
         BlobField: f.TextAreaField,
         BooleanField: f.BooleanField,
@@ -59,6 +62,7 @@ class ModelConverter(object):
         PrimaryKeyField: f.HiddenField,
         TextField: f.TextAreaField,
         TimeField: WPTimeField,
+        TimestampField: WPDateTimeField,
     }
     coerce_defaults = {
         BigIntegerField: int,
@@ -83,7 +87,7 @@ class ModelConverter(object):
         self.coerce_settings = dict(self.coerce_defaults)
         if additional_coerce:
             self.coerce_settings.update(additional_coerce)
-            
+
         self.overrides = overrides or {}
 
     def handle_foreign_key(self, model, field, **kwargs):
@@ -105,6 +109,10 @@ class ModelConverter(object):
         if field_args:
             kwargs.update(field_args)
 
+        if kwargs['validators']:
+            # Create a copy of the list since we will be modifying it.
+            kwargs['validators'] = list(kwargs['validators'])
+
         if field.null:
             # Treat empty string as None when converting.
             kwargs['filters'].append(handle_null_filter)
@@ -120,31 +128,33 @@ class ModelConverter(object):
         if field.name in self.overrides:
             return FieldInfo(field.name, self.overrides[field.name](**kwargs))
 
-        field_class = type(field)
-        if field_class in self.converters:
-            return self.converters[field_class](model, field, **kwargs)
-        elif field_class in self.defaults:
-            if issubclass(self.defaults[field_class], f.FormField):
-                # FormField fields (i.e. for nested forms) do not support
-                # filters.
-                kwargs.pop('filters')
-            if field.choices or 'choices' in kwargs:
-                choices = kwargs.pop('choices', field.choices)
-                if field_class in self.coerce_settings or 'coerce' in kwargs:
-                    coerce_fn = kwargs.pop('coerce',
-                                           self.coerce_settings[field_class])
-                    allow_blank = kwargs.pop('allow_blank', field.null)
-                    kwargs.update({
-                        'choices': choices,
-                        'coerce': coerce_fn,
-                        'allow_blank': allow_blank})
+        for converter in self.converters:
+            if isinstance(field, converter):
+                return self.converters[converter](model, field, **kwargs)
+        else:
+            for converter in self.defaults:
+                if isinstance(field, converter):
+                    if issubclass(self.defaults[converter], f.FormField):
+                        # FormField fields (i.e. for nested forms) do not support
+                        # filters.
+                        kwargs.pop('filters')
+                    if field.choices or 'choices' in kwargs:
+                        choices = kwargs.pop('choices', field.choices)
+                        if converter in self.coerce_settings or 'coerce' in kwargs:
+                            coerce_fn = kwargs.pop('coerce',
+                                                   self.coerce_settings[converter])
+                            allow_blank = kwargs.pop('allow_blank', field.null)
+                            kwargs.update({
+                                'choices': choices,
+                                'coerce': coerce_fn,
+                                'allow_blank': allow_blank})
 
-                    return FieldInfo(field.name, SelectChoicesField(**kwargs))
+                            return FieldInfo(field.name, SelectChoicesField(**kwargs))
 
-            return FieldInfo(field.name, self.defaults[field_class](**kwargs))
+                    return FieldInfo(field.name, self.defaults[converter](**kwargs))
 
         raise AttributeError("There is not possible conversion "
-                             "for '%s'" % field_class)
+                             "for '%s'" % type(field))
 
 
 def model_fields(model, allow_pk=False, only=None, exclude=None,
@@ -157,18 +167,21 @@ def model_fields(model, allow_pk=False, only=None, exclude=None,
     converter = converter or ModelConverter()
     field_args = field_args or {}
 
-    model_fields = list(model._meta.get_sorted_fields())
+    model_fields = list(model._meta.sorted_fields)
     if not allow_pk:
         model_fields.pop(0)
 
     if only:
-        model_fields = [x for x in model_fields if x[0] in only]
+        model_fields = [x for x in model_fields if x.name in only]
     elif exclude:
-        model_fields = [x for x in model_fields if x[0] not in exclude]
+        model_fields = [x for x in model_fields if x.name not in exclude]
 
     field_dict = {}
-    for name, model_field in model_fields:
-        name, field = converter.convert(model, model_field, field_args.get(name))
+    for model_field in model_fields:
+        name, field = converter.convert(
+            model,
+            model_field,
+            field_args.get(model_field.name))
         field_dict[name] = field
 
     return field_dict
