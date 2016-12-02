@@ -10,6 +10,12 @@ to create a form for the Entry model:
 ```python
 from peewee import *
 from wtfpeewee.orm import model_form
+import wtforms
+
+class PasswordField(TextField):
+    """ Custom-defined field example. """
+    def wtf_field(self, model, **kwargs):
+        return wtforms.PasswordField(**kwargs)
 
 class Blog(Model):
     name = CharField()
@@ -21,6 +27,7 @@ class Entry(Model):
     blog = ForeignKeyField(Blog)
     title = CharField()
     body = TextField()
+    protected = PasswordField()
 
     def __unicode__(self):
         return self.title
