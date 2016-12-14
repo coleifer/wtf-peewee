@@ -13,6 +13,7 @@ from wtfpeewee.fields import SelectQueryField
 from wtfpeewee.fields import WPDateField
 from wtfpeewee.fields import WPDateTimeField
 from wtfpeewee.fields import WPTimeField
+from wtfpeewee.fields import WPJSONAreaField
 from wtfpeewee._compat import text_type
 
 from peewee import BareField
@@ -31,6 +32,10 @@ from peewee import PrimaryKeyField
 from peewee import TextField
 from peewee import TimeField
 from peewee import TimestampField
+
+from playhouse.postgres_ext import JSONField as PostgresJSONField
+from playhouse.postgres_ext import BinaryJSONField as PostgresBinaryJSONField
+from playhouse.sqlite_ext import JSONField as SQLiteJSONField
 
 
 __all__ = (
@@ -63,6 +68,9 @@ class ModelConverter(object):
         TextField: f.TextAreaField,
         TimeField: WPTimeField,
         TimestampField: WPDateTimeField,
+        SQLiteJSONField: WPJSONAreaField,
+        PostgresJSONField: WPJSONAreaField,
+        PostgresBinaryJSONField: WPJSONAreaField,
     }
     coerce_defaults = {
         BigIntegerField: int,
