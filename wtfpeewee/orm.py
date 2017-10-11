@@ -27,7 +27,7 @@ from peewee import DoubleField
 from peewee import FloatField
 from peewee import ForeignKeyField
 from peewee import IntegerField
-from peewee import PrimaryKeyField
+from peewee import AutoField
 from peewee import TextField
 from peewee import TimeField
 from peewee import TimestampField
@@ -59,7 +59,7 @@ class ModelConverter(object):
         DoubleField: f.FloatField,
         FloatField: f.FloatField,
         IntegerField: f.IntegerField,
-        PrimaryKeyField: f.HiddenField,
+        AutoField: f.HiddenField,
         TextField: f.TextAreaField,
         TimeField: WPTimeField,
         TimestampField: WPDateTimeField,
@@ -76,7 +76,7 @@ class ModelConverter(object):
         CharField,
         DateTimeField,
         ForeignKeyField,
-        PrimaryKeyField,
+        AutoField,
         TextField)
 
     def __init__(self, additional=None, additional_coerce=None, overrides=None):
