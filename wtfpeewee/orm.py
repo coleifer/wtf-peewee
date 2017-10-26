@@ -31,6 +31,7 @@ from peewee import PrimaryKeyField
 from peewee import TextField
 from peewee import TimeField
 from peewee import TimestampField
+from peewee import UUIDField
 
 
 __all__ = (
@@ -63,6 +64,7 @@ class ModelConverter(object):
         TextField: f.TextAreaField,
         TimeField: WPTimeField,
         TimestampField: WPDateTimeField,
+        UUIDField: f.TextField,
     }
     coerce_defaults = {
         BigIntegerField: int,
@@ -71,13 +73,15 @@ class ModelConverter(object):
         FloatField: float,
         IntegerField: int,
         TextField: text_type,
+        UUIDField: text_type,
     }
     required = (
         CharField,
         DateTimeField,
         ForeignKeyField,
         PrimaryKeyField,
-        TextField)
+        TextField,
+        UUIDField)
 
     def __init__(self, additional=None, additional_coerce=None, overrides=None):
         self.converters = {ForeignKeyField: self.handle_foreign_key}
