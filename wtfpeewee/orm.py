@@ -4,6 +4,7 @@ Tools for generating forms based on Peewee models
 """
 
 from collections import namedtuple
+from collections import OrderedDict
 from wtforms import Form
 from wtforms import fields as f
 from wtforms import validators
@@ -27,7 +28,9 @@ from peewee import DoubleField
 from peewee import FloatField
 from peewee import ForeignKeyField
 from peewee import IntegerField
-from peewee import PrimaryKeyField
+from peewee import IPField
+from peewee import AutoField
+from peewee import SmallIntegerField
 from peewee import TextField
 from peewee import TimeField
 from peewee import TimestampField
@@ -48,30 +51,36 @@ def handle_null_filter(data):
 FieldInfo = namedtuple('FieldInfo', ('name', 'field'))
 
 class ModelConverter(object):
-    defaults = {
-        BareField: f.TextField,
-        BigIntegerField: f.IntegerField,
-        BlobField: f.TextAreaField,
-        BooleanField: f.BooleanField,
-        CharField: f.TextField,
-        DateField: WPDateField,
-        DateTimeField: WPDateTimeField,
-        DecimalField: f.DecimalField,
-        DoubleField: f.FloatField,
-        FloatField: f.FloatField,
-        IntegerField: f.IntegerField,
-        PrimaryKeyField: f.HiddenField,
-        TextField: f.TextAreaField,
-        TimeField: WPTimeField,
-        TimestampField: WPDateTimeField,
-        UUIDField: f.TextField,
-    }
+    defaults = OrderedDict((
+        # Subclasses of other fields.
+        (AutoField, f.HiddenField),
+        (BigIntegerField, f.IntegerField),
+        (DoubleField, f.FloatField),
+        (IPField, f.TextField),
+        (SmallIntegerField, f.IntegerField),
+        (TimestampField, WPDateTimeField),
+
+        # Base-classes.
+        (BareField, f.TextField),
+        (BlobField, f.TextAreaField),
+        (BooleanField, f.BooleanField),
+        (CharField, f.TextField),
+        (DateField, WPDateField),
+        (DateTimeField, WPDateTimeField),
+        (DecimalField, f.DecimalField),
+        (FloatField, f.FloatField),
+        (IntegerField, f.IntegerField),
+        (TextField, f.TextAreaField),
+        (TimeField, WPTimeField),
+        (UUIDField, f.TextField),
+    ))
     coerce_defaults = {
         BigIntegerField: int,
         CharField: text_type,
         DoubleField: float,
         FloatField: float,
         IntegerField: int,
+        SmallIntegerField: int,
         TextField: text_type,
         UUIDField: text_type,
     }
@@ -79,7 +88,7 @@ class ModelConverter(object):
         CharField,
         DateTimeField,
         ForeignKeyField,
-        PrimaryKeyField,
+        AutoField,
         TextField,
         UUIDField)
 

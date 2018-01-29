@@ -37,7 +37,7 @@ class Blog(TestModel):
 
 @implements_to_string
 class Entry(TestModel):
-    pk = PrimaryKeyField()
+    pk = AutoField()
     blog = ForeignKeyField(Blog)
     title = CharField(verbose_name='Wacky title')
     content = TextField()
@@ -232,7 +232,7 @@ class WTFPeeweeTestCase(unittest.TestCase):
 
         # check that the options look right
         self.assertEqual(list(form.blog.iter_choices()), [
-            (self.blog_a.get_id(), u'a', False), (self.blog_b.get_id(), u'b', False)
+            (self.blog_a._pk, u'a', False), (self.blog_b._pk, u'b', False)
         ])
 
     def test_blog_form_with_obj(self):
@@ -252,7 +252,7 @@ class WTFPeeweeTestCase(unittest.TestCase):
 
         # check that the options look right
         self.assertEqual(list(form.blog.iter_choices()), [
-            (self.blog_a.get_id(), u'a', True), (self.blog_b.get_id(), u'b', False)
+            (self.blog_a._pk, u'a', True), (self.blog_b._pk, u'b', False)
         ])
 
     def test_blog_form_saving(self):
@@ -294,7 +294,7 @@ class WTFPeeweeTestCase(unittest.TestCase):
             'content': 'some content',
             'pub_date-date': '2011-02-01',
             'pub_date-time': '00:00:00',
-            'blog': self.blog_b.get_id(),
+            'blog': self.blog_b._pk,
         }))
         self.assertTrue(form.validate())
 
@@ -320,7 +320,7 @@ class WTFPeeweeTestCase(unittest.TestCase):
             'title': 'a1 edited',
             'content': 'a1 content',
             'pub_date': '2011-01-01 00:00:00',
-            'blog': self.blog_b.get_id(),
+            'blog': self.blog_b._pk,
         }), obj=self.entry_a1)
         self.assertTrue(form.validate())
 
@@ -423,12 +423,12 @@ class WTFPeeweeTestCase(unittest.TestCase):
         form = TestEntryForm(FakePost({
             'title': 'new entry',
             'content': 'some content',
-            'blog': self.blog_b.get_id(),
+            'blog': self.blog_b._pk,
         }))
 
         # check the htmlz for the form's hidden field
         html = form._fields['blog']()
-        self.assertEqual(html, u'<input id="blog" name="blog" type="hidden" value="%s">' % self.blog_b.get_id())
+        self.assertEqual(html, u'<input id="blog" name="blog" type="hidden" value="%s">' % self.blog_b._pk)
 
         self.assertTrue(form.validate())
         self.assertEqual(form.blog.data, self.blog_b)
@@ -451,12 +451,12 @@ class WTFPeeweeTestCase(unittest.TestCase):
         form = TestEntryForm(FakePost({
             'title': 'a1 edited',
             'content': 'a1 content',
-            'blog': self.blog_b.get_id(),
+            'blog': self.blog_b._pk,
         }), obj=self.entry_a1)
 
         # check the htmlz for the form's hidden field
         html = form._fields['blog']()
-        self.assertEqual(html, u'<input id="blog" name="blog" type="hidden" value="%s">' % self.blog_b.get_id())
+        self.assertEqual(html, u'<input id="blog" name="blog" type="hidden" value="%s">' % self.blog_b._pk)
 
         self.assertTrue(form.validate())
 

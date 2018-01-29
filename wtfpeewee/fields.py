@@ -212,7 +212,7 @@ class SelectQueryField(fields.SelectFieldBase):
         self.allow_blank = allow_blank
         self.blank_text = blank_text or '----------------'
         self.query = query
-        self.model = query.model_class
+        self.model = query.model
         self._set_data(None)
 
         if get_label is None:
@@ -249,7 +249,7 @@ class SelectQueryField(fields.SelectFieldBase):
             yield (u'__None', self.blank_text, self.data is None)
 
         for obj in self.query.clone():
-            yield (obj.get_id(), self.get_label(obj), obj == self.data)
+            yield (obj._pk, self.get_label(obj), obj == self.data)
 
     def process_formdata(self, valuelist):
         if valuelist:
@@ -261,7 +261,7 @@ class SelectQueryField(fields.SelectFieldBase):
 
     def pre_validate(self, form):
         if self.data is not None:
-            if not self.query.where(self.model._meta.primary_key==self.data.get_id()).exists():
+            if not self.query.where(self.model._meta.primary_key==self.data._pk).exists():
                 raise ValidationError(self.gettext('Not a valid choice'))
         elif not self.allow_blank:
             raise ValidationError(self.gettext('Selection cannot be blank'))
@@ -297,7 +297,7 @@ class SelectMultipleQueryField(SelectQueryField):
 
     def iter_choices(self):
         for obj in self.query.clone():
-            yield (obj.get_id(), self.get_label(obj), obj in self.data)
+            yield (obj._pk, self.get_label(obj), obj in self.data)
 
     def process_formdata(self, valuelist):
         if valuelist:
@@ -306,7 +306,7 @@ class SelectMultipleQueryField(SelectQueryField):
 
     def pre_validate(self, form):
         if self.data:
-            id_list = [m.get_id() for m in self.data]
+            id_list = [m._pk for m in self.data]
             if id_list and not self.query.where(self.model._meta.primary_key << id_list).count() == len(id_list):
                 raise ValidationError(self.gettext('Not a valid choice'))
 
@@ -316,7 +316,7 @@ class HiddenQueryField(fields.HiddenField):
         self.allow_blank = kwargs.pop('allow_blank', False)
         super(fields.HiddenField, self).__init__(label, validators, **kwargs)
         self.query = query
-        self.model = query.model_class
+        self.model = query.model
         self._set_data(None)
 
         if get_label is None:
@@ -352,7 +352,7 @@ class HiddenQueryField(fields.HiddenField):
         return self.widget(self, **kwargs)
 
     def _value(self):
-        return self.data and self.data.get_id() or ''
+        return self.data and self.data._pk or ''
 
     def process_formdata(self, valuelist):
         if valuelist:
