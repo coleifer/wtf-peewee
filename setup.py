@@ -3,7 +3,7 @@ from setuptools import setup
 
 setup(
     name='wtf-peewee',
-    version='0.2.6',
+    version='3.0.0',
     url='https://github.com/coleifer/wtf-peewee/',
     license='MIT',
     author='Charles Leifer',
