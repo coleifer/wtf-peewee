@@ -56,15 +56,15 @@ class ModelConverter(object):
         (AutoField, f.HiddenField),
         (BigIntegerField, f.IntegerField),
         (DoubleField, f.FloatField),
-        (IPField, f.TextField),
+        (IPField, f.StringField),
         (SmallIntegerField, f.IntegerField),
         (TimestampField, WPDateTimeField),
 
         # Base-classes.
-        (BareField, f.TextField),
+        (BareField, f.StringField),
         (BlobField, f.TextAreaField),
         (BooleanField, f.BooleanField),
-        (CharField, f.TextField),
+        (CharField, f.StringField),
         (DateField, WPDateField),
         (DateTimeField, WPDateTimeField),
         (DecimalField, f.DecimalField),
@@ -72,7 +72,7 @@ class ModelConverter(object):
         (IntegerField, f.IntegerField),
         (TextField, f.TextAreaField),
         (TimeField, WPTimeField),
-        (UUIDField, f.TextField),
+        (UUIDField, f.StringField),
     ))
     coerce_defaults = {
         BigIntegerField: int,
