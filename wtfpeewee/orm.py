@@ -136,7 +136,7 @@ class ModelConverter(object):
             kwargs['validators'].append(validators.Optional())
         else:
             if isinstance(field, self.required):
-                kwargs['validators'].append(validators.Required())
+                kwargs['validators'].append(validators.DataRequired())
 
         if field.name in self.overrides:
             return FieldInfo(field.name, self.overrides[field.name](**kwargs))
