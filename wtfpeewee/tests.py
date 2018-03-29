@@ -208,7 +208,7 @@ class WTFPeeweeTestCase(unittest.TestCase):
     def test_blog_form(self):
         form = BlogForm()
         self.assertEqual(list(form._fields.keys()), ['title'])
-        self.assertTrue(isinstance(form.title, wtfields.TextField))
+        self.assertTrue(isinstance(form.title, wtfields.StringField))
         self.assertEqual(form.data, {'title': None})
 
     def test_entry_form(self):
@@ -218,7 +218,7 @@ class WTFPeeweeTestCase(unittest.TestCase):
         self.assertTrue(isinstance(form.blog, ModelSelectField))
         self.assertTrue(isinstance(form.content, wtfields.TextAreaField))
         self.assertTrue(isinstance(form.pub_date, WPDateTimeField))
-        self.assertTrue(isinstance(form.title, wtfields.TextField))
+        self.assertTrue(isinstance(form.title, wtfields.StringField))
 
         self.assertEqual(form.title.label.text, 'Wacky title')
         self.assertEqual(form.blog.label.text, 'Blog')
@@ -417,7 +417,7 @@ class WTFPeeweeTestCase(unittest.TestCase):
     def test_hidden_field(self):
         class TestEntryForm(WTForm):
             blog = HiddenQueryField(query=Blog.select())
-            title = wtfields.TextField()
+            title = wtfields.StringField()
             content = wtfields.TextAreaField()
 
         form = TestEntryForm(FakePost({

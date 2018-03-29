@@ -52,7 +52,7 @@ class BooleanSelectField(fields.SelectFieldBase):
                 raise ValueError(self.gettext(u'Invalid Choice: could not coerce'))
 
 
-class WPTimeField(StaticAttributesMixin, fields.TextField):
+class WPTimeField(StaticAttributesMixin, fields.StringField):
     attributes = {'class': 'time-widget'}
     formats = ['%H:%M:%S', '%H:%M']
 
