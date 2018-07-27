@@ -53,12 +53,12 @@ FieldInfo = namedtuple('FieldInfo', ('name', 'field'))
 class ModelConverter(object):
     defaults = OrderedDict((
         # Subclasses of other fields.
+        (IPField, f.StringField),  # Subclass of BigIntegerField.
+        (TimestampField, WPDateTimeField),  # Subclass of BigIntegerField.
         (AutoField, f.HiddenField),
         (BigIntegerField, f.IntegerField),
         (DoubleField, f.FloatField),
-        (IPField, f.StringField),
         (SmallIntegerField, f.IntegerField),
-        (TimestampField, WPDateTimeField),
 
         # Base-classes.
         (BareField, f.StringField),
