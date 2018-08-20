@@ -84,13 +84,16 @@ class ModelConverter(object):
         TextField: text_type,
         UUIDField: text_type,
     }
-    required = (
+    data_required = (
         CharField,
         DateTimeField,
         ForeignKeyField,
         AutoField,
         TextField,
         UUIDField)
+    required = (
+        IntegerField
+    )
 
     def __init__(self, additional=None, additional_coerce=None, overrides=None):
         self.converters = {ForeignKeyField: self.handle_foreign_key}
@@ -130,13 +133,15 @@ class ModelConverter(object):
             # Treat empty string as None when converting.
             kwargs['filters'].append(handle_null_filter)
 
-        if (field.null or (field.default is not None)) and not field.choices:
-            # If the field can be empty, or has a default value, do not require
-            # it when submitting a form.
-            kwargs['validators'].append(validators.Optional())
-        else:
-            if isinstance(field, self.required):
-                kwargs['validators'].append(validators.DataRequired())
+        if (field.null or (field.default is not None)):
+            if not field.choices:
+                # If the field can be empty, or has a default value, do not require
+                # it when submitting a form.
+                kwargs['validators'].append(validators.Optional())
+        elif isinstance(field, self.data_required):
+            kwargs['validators'].append(validators.DataRequired())
+        elif isinstance(field, self.required):
+            kwargs['validators'].append(validators.InputRequired())
 
         if field.name in self.overrides:
             return FieldInfo(field.name, self.overrides[field.name](**kwargs))
