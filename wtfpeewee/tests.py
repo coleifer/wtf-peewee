@@ -63,6 +63,11 @@ class ChoicesModel(TestModel):
     true_or_false = BooleanField(choices=((True, 't'), (False, 'f')))
 
 
+class BlankChoices(TestModel):
+    status = IntegerField(choices=((None, ''), (1, 'One'), (2, 'Two')),
+                          null=True)
+
+
 class NonIntPKModel(TestModel):
     id = CharField(primary_key=True)
     value = CharField()
@@ -72,6 +77,7 @@ BlogForm = model_form(Blog)
 EntryForm = model_form(Entry)
 NullFieldsModelForm = model_form(NullFieldsModel)
 ChoicesForm = model_form(ChoicesModel, field_args={'salutation': {'choices': (('mr', 'Mr.'), ('mrs', 'Mrs.'))}})
+BlankChoicesForm = model_form(BlankChoices)
 NonIntPKForm = model_form(NonIntPKModel, allow_pk=True)
 
 class FakePost(dict):
@@ -195,15 +201,31 @@ class WTFPeeweeTestCase(unittest.TestCase):
         self.assertEqual(form.status.data, 1)
         self.assertTrue(form.validate())
 
-        choices_obj.status = '3'
-        form = ChoicesForm(obj=choices_obj)
+        # "3" is not a valid status.
+        form = ChoicesForm(FakePost({'status': '3'}), obj=choices_obj)
 
+        # Invalid choice -- must be 1 or 2.
         self.assertFalse(form.validate())
+        self.assertTrue(list(form.errors), ['status'])
 
+        # This is a change -- although the status field is null=True, since it
+        # defines choices=(...) then the user must select something.
         choices_obj.status = None
         form = ChoicesForm(obj=choices_obj)
         self.assertEqual(form.status.data, None)
+        self.assertFalse(form.validate())
+        self.assertTrue(list(form.errors), ['status'])
+
+    def test_blank_choices(self):
+        obj = BlankChoices(status=None)
+        form = BlankChoicesForm(obj=obj)
         self.assertTrue(form.validate())
+
+        form = BlankChoicesForm(FakePost({'status': 1}))
+        self.assertTrue(form.validate())
+
+        form = BlankChoicesForm(FakePost({'status': 3}))
+        self.assertFalse(form.validate())
 
     def test_blog_form(self):
         form = BlogForm()

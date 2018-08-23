@@ -48,6 +48,24 @@ def handle_null_filter(data):
         return None
     return data
 
+class ValueRequired(object):
+    """
+    Custom validation class that differentiates between false-y values and
+    truly blank values. See the implementation of DataRequired and
+    InputRequired -- this class sits somewhere in the middle of them.
+    """
+    field_flags = ('required',)
+
+    def __init__(self, message=None):
+        self.message = message
+
+    def __call__(self, form, field):
+        if field.data is None or isinstance(field.data, text_type) \
+           and not field.data.strip():
+            message = self.message or field.gettext('This field is required.')
+            field.errors[:] = []
+            raise validators.StopValidation(message)
+
 FieldInfo = namedtuple('FieldInfo', ('name', 'field'))
 
 class ModelConverter(object):
@@ -124,11 +142,12 @@ class ModelConverter(object):
             kwargs['filters'].append(handle_null_filter)
 
         if (field.null or (field.default is not None)) and not field.choices:
-            # If the field can be empty, or has a default value, do not require
-            # it when submitting a form.
+            # We allow the field to be optional if:
+            # 1. the field is null=True and can be blank.
+            # 2. the field has a default value.
             kwargs['validators'].append(validators.Optional())
-        else:
-            kwargs['validators'].append(validators.InputRequired())
+        elif not field.choices or all(v for v, _ in field.choices):
+            kwargs['validators'].append(ValueRequired())
 
         if field.name in self.overrides:
             return FieldInfo(field.name, self.overrides[field.name](**kwargs))
