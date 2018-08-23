@@ -84,13 +84,6 @@ class ModelConverter(object):
         TextField: text_type,
         UUIDField: text_type,
     }
-    required = (
-        CharField,
-        DateTimeField,
-        ForeignKeyField,
-        AutoField,
-        TextField,
-        UUIDField)
 
     def __init__(self, additional=None, additional_coerce=None, overrides=None):
         self.converters = {ForeignKeyField: self.handle_foreign_key}
@@ -135,8 +128,7 @@ class ModelConverter(object):
             # it when submitting a form.
             kwargs['validators'].append(validators.Optional())
         else:
-            if isinstance(field, self.required):
-                kwargs['validators'].append(validators.DataRequired())
+            kwargs['validators'].append(validators.InputRequired())
 
         if field.name in self.overrides:
             return FieldInfo(field.name, self.overrides[field.name](**kwargs))
