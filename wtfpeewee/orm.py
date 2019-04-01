@@ -141,12 +141,13 @@ class ModelConverter(object):
             # Treat empty string as None when converting.
             kwargs['filters'].append(handle_null_filter)
 
-        if (field.null or (field.default is not None)) and not field.choices:
+        if (field.null or (field.default is not None)) or (
+                field.choices and any(not (v) for v, _ in field.choices)):
             # We allow the field to be optional if:
             # 1. the field is null=True and can be blank.
             # 2. the field has a default value.
             kwargs['validators'].append(validators.Optional())
-        elif not field.choices or all(v for v, _ in field.choices):
+        else:
             kwargs['validators'].append(ValueRequired())
 
         if field.name in self.overrides:
