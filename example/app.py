@@ -68,7 +68,7 @@ class Comment(BaseModel):
     name = CharField()
     comment = TextField()
     pub_date = DateTimeField(default=datetime.datetime.now)
-    
+
     class Meta:
         order_by = ('pub_date',)
 
@@ -96,7 +96,7 @@ def get_or_404(query, *expr):
 @app.route('/')
 def index():
     posts = Post.select().join(
-        Comment, JOIN_LEFT_OUTER
+        Comment, JOIN.LEFT_OUTER
     ).switch(Post).annotate(Comment, fn.Count(Comment.id).alias('comment_count'))
     return render_template('posts/index.html', posts=posts)
 
@@ -109,7 +109,7 @@ def detail(id):
 @app.route('/add/', methods=['GET', 'POST'])
 def add():
     post = Post()
-    
+
     if request.method == 'POST':
         form = PostForm(request.form, obj=post)
         if form.validate():
@@ -119,13 +119,13 @@ def add():
             return redirect(url_for('detail', id=post.id))
     else:
         form = PostForm(obj=post)
-    
+
     return render_template('posts/add.html', post=post, form=form)
 
 @app.route('/<id>/edit/', methods=['GET', 'POST'])
 def edit(id):
     post = get_or_404(Post.select(), Post.id == id)
-    
+
     if request.method == 'POST':
         form = PostForm(request.form, obj=post)
         if form.validate():
@@ -135,7 +135,7 @@ def edit(id):
             return redirect(url_for('detail', id=post.id))
     else:
         form = PostForm(obj=post)
-    
+
     return render_template('posts/edit.html', post=post, form=form)
 
 @app.route('/comment/', methods=['POST'])
@@ -148,7 +148,7 @@ def comment():
         flash('Thank you for your comment!', 'success')
     else:
         flash('There were errors with your comment', 'error')
-    
+
     return redirect(url_for('detail', id=comment.post.id))
 
 
