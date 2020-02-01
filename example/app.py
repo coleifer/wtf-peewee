@@ -83,7 +83,7 @@ CommentForm = model_form(Comment, exclude=('pub_date',), converter=HiddenForeign
 def get_or_404(query, *expr):
     try:
         return query.where(*expr).get()
-    except query.model_class.DoesNotExist:
+    except query.model.DoesNotExist:
         abort(404)
 
 # views
