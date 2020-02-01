@@ -12,7 +12,7 @@
 
 <hr />
 <h3>Add a comment</h3>
-<form method="post" action="{{ url_for('comment') }}">
+<form method="post" action="{{ url_for('comment', id=post.id) }}">
   {{ comment_form.post }}
   <div class="clearfix">
     {{ comment_form.name.label }}

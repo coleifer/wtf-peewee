@@ -59,18 +59,12 @@ class Post(BaseModel):
     def __unicode__(self):
         return self.title
 
-    class Meta:
-        order_by = ('-pub_date',)
-
 
 class Comment(BaseModel):
     post = ForeignKeyField(Post, related_name='comments')
     name = CharField()
     comment = TextField()
     pub_date = DateTimeField(default=datetime.datetime.now)
-
-    class Meta:
-        order_by = ('pub_date',)
 
 
 # form classes
@@ -95,9 +89,11 @@ def get_or_404(query, *expr):
 # views
 @app.route('/')
 def index():
-    posts = Post.select().join(
-        Comment, JOIN.LEFT_OUTER
-    ).switch(Post).annotate(Comment, fn.Count(Comment.id).alias('comment_count'))
+    posts = (Post
+             .select(Post, fn.COUNT(Comment.id).alias('comment_count'))
+             .join(Comment, JOIN.LEFT_OUTER)
+             .group_by(Post)
+             .order_by(Post.pub_date.desc()))
     return render_template('posts/index.html', posts=posts)
 
 @app.route('/<id>/')
@@ -138,9 +134,10 @@ def edit(id):
 
     return render_template('posts/edit.html', post=post, form=form)
 
-@app.route('/comment/', methods=['POST'])
-def comment():
-    comment = Comment()
+@app.route('/<id>/comment/', methods=['POST'])
+def comment(id):
+    post = get_or_404(Post.select(), Post.id == id)
+    comment = Comment(post=post)
     form = CommentForm(request.form, obj=comment)
     if form.validate():
         form.populate_obj(comment)
