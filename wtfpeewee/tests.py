@@ -208,13 +208,19 @@ class WTFPeeweeTestCase(unittest.TestCase):
         self.assertFalse(form.validate())
         self.assertTrue(list(form.errors), ['status'])
 
-        # This is a change -- although the status field is null=True, since it
-        # defines choices=(...) then the user must select something.
+        # Nullable field with choices:
         choices_obj.status = None
         form = ChoicesForm(obj=choices_obj)
         self.assertEqual(form.status.data, None)
+        self.assertTrue(form.validate())
+        self.assertFalse(list(form.errors), ['status'])
+
+        # Not-nullable field with choices:
+        choices_obj.gender = None
+        form = ChoicesForm(obj=choices_obj)
+        self.assertEqual(form.status.data, None)
         self.assertFalse(form.validate())
-        self.assertTrue(list(form.errors), ['status'])
+        self.assertTrue(list(form.errors), ['gender'])
 
     def test_blank_choices(self):
         obj = BlankChoices(status=None)
