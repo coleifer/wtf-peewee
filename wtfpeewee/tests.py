@@ -64,7 +64,7 @@ class ChoicesModel(TestModel):
 
 
 class BlankChoices(TestModel):
-    status = IntegerField(choices=((None, ''), (1, 'One'), (2, 'Two')),
+    status = IntegerField(choices=((1, 'One'), (2, 'Two')),
                           null=True)
 
 
@@ -227,8 +227,23 @@ class WTFPeeweeTestCase(unittest.TestCase):
         form = BlankChoicesForm(obj=obj)
         self.assertTrue(form.validate())
 
+        # Ensure that the "None" status value is set when populating an object
+        # (overwriting a previous non-empty value).
+        new_obj = BlankChoices(status=1)
+        form.populate_obj(new_obj)
+        self.assertTrue(new_obj.status is None)
+
+        new_obj = BlankChoices(status=1)
+        form = BlankChoicesForm(FakePost({'status': ''}))
+        self.assertTrue(form.validate())
+        form.populate_obj(new_obj)
+        self.assertTrue(new_obj.status is None)
+
+        new_obj = BlankChoices()
         form = BlankChoicesForm(FakePost({'status': 1}))
         self.assertTrue(form.validate())
+        form.populate_obj(new_obj)
+        self.assertEqual(new_obj.status, 1)
 
         form = BlankChoicesForm(FakePost({'status': 3}))
         self.assertFalse(form.validate())
