@@ -14,6 +14,6 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: pip deps
-        run: pip install peewee wtforms
+        run: pip install peewee markupsafe 'wtforms<3.0'
       - name: runtests
         run: python runtests.py
