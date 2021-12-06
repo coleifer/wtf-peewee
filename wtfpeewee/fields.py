@@ -6,10 +6,17 @@ import datetime
 import operator
 import warnings
 
+try:
+    from markupsafe import Markup
+except ImportError:
+    try:
+        from wtforms.widgets import HTMLString as Markup
+    except ImportError:
+        raise ImportError('Could not import markupsafe.Markup. Please install '
+                          'markupsafe.')
 from wtforms import fields, form, widgets
 from wtforms.fields import FormField, _unset_value
 from wtforms.validators import ValidationError
-from wtforms.widgets import HTMLString, html_params
 from wtfpeewee._compat import text_type, string_types
 
 __all__ = (
@@ -87,7 +94,7 @@ def datetime_widget(field, **kwargs):
     html = []
     for subfield in field:
         html.append(subfield(**kwargs))
-    return HTMLString(u''.join(html))
+    return Markup(u''.join(html))
 
 
 def generate_datetime_form(validators=None):
