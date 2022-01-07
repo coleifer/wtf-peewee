@@ -3,6 +3,7 @@ import sys
 import unittest
 
 from peewee import *
+from wtforms import __version__ as wtforms_version
 from wtforms import fields as wtfields
 from wtforms.form import Form as WTForm
 from wtforms.validators import Regexp
@@ -193,7 +194,11 @@ class WTFPeeweeTestCase(unittest.TestCase):
         choices_obj.gender = 'x'
         form = ChoicesForm(obj=choices_obj)
         self.assertFalse(form.validate())
-        self.assertEqual(form.errors, {'gender': ['Not a valid choice']})
+        if wtforms_version[0] == '2':
+            errmsg = 'Not a valid choice'
+        else:
+            errmsg = 'Not a valid choice.'
+        self.assertEqual(form.errors, {'gender': [errmsg]})
 
         choices_obj.gender = 'm'
         choices_obj.status = '1'

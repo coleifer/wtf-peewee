@@ -112,7 +112,7 @@ class WPDateTimeField(FormField):
         super(WPDateTimeField, self).__init__(
             DynamicForm, label, validators=None, **kwargs)
 
-    def process(self, formdata, data=_unset_value):
+    def process(self, formdata, data=_unset_value, **_):
         prefix = self.name + self.separator
         kwargs = {}
         if data is _unset_value:
