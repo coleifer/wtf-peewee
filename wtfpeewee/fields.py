@@ -14,6 +14,7 @@ except ImportError:
     except ImportError:
         raise ImportError('Could not import markupsafe.Markup. Please install '
                           'markupsafe.')
+from wtforms import __version__ as wtforms_version
 from wtforms import fields, form, widgets
 from wtforms.fields import FormField, _unset_value
 from wtforms.validators import ValidationError
@@ -38,12 +39,20 @@ class StaticAttributesMixin(object):
         return super(StaticAttributesMixin, self).__call__(**kwargs)
 
 
+if wtforms_version < '3.1.0':
+    def wtf_choice(*args):
+        return args
+else:
+    def wtf_choice(*args):
+        return args + ({},)
+
+
 class BooleanSelectField(fields.SelectFieldBase):
     widget = widgets.Select()
 
     def iter_choices(self):
-        yield ('1', 'True', self.data)
-        yield ('', 'False', not self.data)
+        yield wtf_choice('1', 'True', self.data)
+        yield wtf_choice('', 'False', not self.data)
 
     def process_data(self, value):
         try:
@@ -164,10 +173,10 @@ class SelectChoicesField(fields.SelectField):
 
     def iter_choices(self):
         if self.allow_blank:
-            yield (u'__None', self.blank_text, self.data is None)
+            yield wtf_choice(u'__None', self.blank_text, self.data is None)
 
         for value, label in self.choices:
-            yield (value, label, self.coerce(value) == self.data)
+            yield wtf_choice(value, label, self.coerce(value) == self.data)
 
     def process_data(self, value):
         if value is None:
@@ -253,10 +262,10 @@ class SelectQueryField(fields.SelectFieldBase):
 
     def iter_choices(self):
         if self.allow_blank:
-            yield (u'__None', self.blank_text, self.data is None)
+            yield wtf_choice(u'__None', self.blank_text, self.data is None)
 
         for obj in self.query.clone():
-            yield (obj._pk, self.get_label(obj), obj == self.data)
+            yield wtf_choice(obj._pk, self.get_label(obj), obj == self.data)
 
     def process_formdata(self, valuelist):
         if valuelist:
@@ -304,7 +313,7 @@ class SelectMultipleQueryField(SelectQueryField):
 
     def iter_choices(self):
         for obj in self.query.clone():
-            yield (obj._pk, self.get_label(obj), obj in self.data)
+            yield wtf_choice(obj._pk, self.get_label(obj), obj in self.data)
 
     def process_formdata(self, valuelist):
         if valuelist:

@@ -8,6 +8,7 @@ from wtforms import fields as wtfields
 from wtforms.form import Form as WTForm
 from wtforms.validators import Regexp
 from wtfpeewee.fields import *
+from wtfpeewee.fields import wtf_choice
 from wtfpeewee.orm import model_form
 from wtfpeewee._compat import PY2
 
@@ -110,6 +111,9 @@ class WTFPeeweeTestCase(unittest.TestCase):
         self.entry_a2 = Entry.create(blog=self.blog_a, title='a2', content='a2 content', pub_date=datetime.datetime(2011, 1, 2))
         self.entry_b1 = Entry.create(blog=self.blog_b, title='b1', content='b1 content', pub_date=datetime.datetime(2011, 1, 1))
 
+    def assertChoices(self, c, expected):
+        self.assertEqual(list(c.iter_choices()), [wtf_choice(*i) for i in expected])
+
     def test_defaults(self):
         BlogFormDef = model_form(Blog, field_args={'title': {'default': 'hello world'}})
 
@@ -171,15 +175,17 @@ class WTFPeeweeTestCase(unittest.TestCase):
         self.assertTrue(isinstance(form.salutation, SelectChoicesField))
         self.assertTrue(isinstance(form.true_or_false, wtfields.BooleanField))
 
-        self.assertEqual(list(form.gender.iter_choices()), [
-            ('m', 'Male', False), ('f', 'Female', False)
-        ])
-        self.assertEqual(list(form.status.iter_choices()), [
-            ('__None', '----------------', True), (1, 'One', False), (2, 'Two', False)
-        ])
-        self.assertEqual(list(form.salutation.iter_choices()), [
-            ('__None', '----------------', True), ('mr', 'Mr.', False), ('mrs', 'Mrs.', False),
-        ])
+        self.assertChoices(form.gender, [
+            ('m', 'Male', False),
+            ('f', 'Female', False)])
+        self.assertChoices(form.status, [
+            ('__None', '----------------', True),
+            (1, 'One', False),
+            (2, 'Two', False)])
+        self.assertChoices(form.salutation, [
+            ('__None', '----------------', True),
+            ('mr', 'Mr.', False),
+            ('mrs', 'Mrs.', False)])
 
         choices_obj = ChoicesModel(gender='m', status=2, salutation=None)
         form = ChoicesForm(obj=choices_obj)
@@ -279,9 +285,9 @@ class WTFPeeweeTestCase(unittest.TestCase):
         self.assertEqual(form.blog.data, None)
 
         # check that the options look right
-        self.assertEqual(list(form.blog.iter_choices()), [
-            (self.blog_a._pk, u'a', False), (self.blog_b._pk, u'b', False)
-        ])
+        self.assertChoices(form.blog, [
+            (self.blog_a._pk, u'a', False),
+            (self.blog_b._pk, u'b', False)])
 
     def test_blog_form_with_obj(self):
         form = BlogForm(obj=self.blog_a)
@@ -299,9 +305,9 @@ class WTFPeeweeTestCase(unittest.TestCase):
         self.assertTrue(form.validate())
 
         # check that the options look right
-        self.assertEqual(list(form.blog.iter_choices()), [
-            (self.blog_a._pk, u'a', True), (self.blog_b._pk, u'b', False)
-        ])
+        self.assertChoices(form.blog, [
+            (self.blog_a._pk, u'a', True),
+            (self.blog_b._pk, u'b', False)])
 
     def test_blog_form_saving(self):
         form = BlogForm(FakePost({'title': 'new blog'}))
@@ -437,24 +443,21 @@ class WTFPeeweeTestCase(unittest.TestCase):
             blog = SelectMultipleQueryField(query=Blog.select())
 
         frm = TestForm()
-        self.assertEqual([x for x in frm.blog.iter_choices()], [
+        self.assertChoices(frm.blog, [
             (self.blog_a.id, 'a', False),
-            (self.blog_b.id, 'b', False),
-        ])
+            (self.blog_b.id, 'b', False)])
 
         frm = TestForm(FakePost({'blog': [self.blog_b.id]}))
-        self.assertEqual([x for x in frm.blog.iter_choices()], [
+        self.assertChoices(frm.blog, [
             (self.blog_a.id, 'a', False),
-            (self.blog_b.id, 'b', True),
-        ])
+            (self.blog_b.id, 'b', True)])
         self.assertEqual(frm.blog.data, [self.blog_b])
         self.assertTrue(frm.validate())
 
         frm = TestForm(FakePost({'blog': [self.blog_b.id, self.blog_a.id]}))
-        self.assertEqual([x for x in frm.blog.iter_choices()], [
+        self.assertChoices(frm.blog, [
             (self.blog_a.id, 'a', True),
-            (self.blog_b.id, 'b', True),
-        ])
+            (self.blog_b.id, 'b', True)])
         self.assertEqual(frm.blog.data, [self.blog_a, self.blog_b])
         self.assertTrue(frm.validate())
 
