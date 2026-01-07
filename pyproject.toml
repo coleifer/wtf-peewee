@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wtf-peewee"
+dynamic = ["version"]
+description = "wtforms integration for peewee"
+dependencies = [
+    "wtforms",
+    "peewee>=3.0.0",
+]
+readme = "README.md"
+authors = [
+    { name = "Charles Leifer", email = "coleifer@gmail.com" }
+]
+classifiers = [
+    "Environment :: Web Environment",
+    "Programming Language :: Python :: 2",
+    "Programming Language :: Python :: 3",
+    "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+[project.urls]
+Repository = "https://github.com/coleifer/wtf-peewee"
+
+[tool.setuptools]
+packages = ["wtfpeewee"]
+
+[tool.setuptools.dynamic]
+version = { attr = "wtfpeewee.__version__" }
