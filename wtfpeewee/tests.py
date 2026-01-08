@@ -11,7 +11,7 @@ from playhouse.sqlite_ext import JSONField as SQLiteJSONField
 from wtforms import __version__ as wtforms_version
 from wtforms import fields as wtfields
 from wtforms.form import Form as WTForm
-from wtforms.validators import Regexp
+from wtforms.validators import Length, Regexp
 from wtfpeewee.fields import *
 from wtfpeewee.fields import wtf_choice
 from wtfpeewee.orm import model_form
@@ -645,6 +645,19 @@ class WTFPeeweeTestCase(unittest.TestCase):
 
         form = Form(FakePost({'key': 'asdf'}))
         self.assertEqual(form.data, {'key': 'asdf', 'value': None})
+
+    def test_optional_foreign_key(self):
+        Form = model_form(NullEntry)
+        self.assertTrue(Form(FakePost({'blog': self.blog_a.id})).validate())
+        self.assertFalse(Form(FakePost({'blog': '10000'})).validate())
+
+        Form = model_form(NullEntry, field_args={'blog': {
+            'validators': [Length(max=10)]}})
+        form = Form(FakePost({'blog': 'xyz'}))
+        self.assertFalse(Form(FakePost({'blog': 'xyz'})).validate())
+
+        form = Form(FakePost({'blog': 'xyzxyzxyzxyz'}))
+        self.assertFalse(Form(FakePost({'blog': 'xyz'})).validate())
 
 
 if __name__ == '__main__':

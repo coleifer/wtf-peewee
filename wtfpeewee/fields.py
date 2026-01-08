@@ -270,7 +270,11 @@ class SelectQueryField(fields.SelectFieldBase):
 
     def _get_data(self):
         if self._formdata is not None:
-            self._set_data(self.get_model(self._formdata))
+            model = self.get_model(self._formdata)
+            if model is not None:
+                self._set_data(model)
+            else:
+                self._data = self._formdata
         return self._data
 
     def _set_data(self, data):
@@ -301,8 +305,14 @@ class SelectQueryField(fields.SelectFieldBase):
 
     def pre_validate(self, form):
         if self.data is not None:
-            if not self.query.where(self.model._meta.primary_key==self.data._pk).exists():
+            if isinstance(self.data, self.model):
+                value = self.data._pk
+            else:
+                value = self.data
+
+            if not self.query.where(self.model._meta.primary_key == value).exists():
                 raise ValidationError(self.gettext('Not a valid choice'))
+
         elif not self.allow_blank:
             raise ValidationError(self.gettext('Selection cannot be blank'))
 
