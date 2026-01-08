@@ -654,10 +654,14 @@ class WTFPeeweeTestCase(unittest.TestCase):
         Form = model_form(NullEntry, field_args={'blog': {
             'validators': [Length(max=10)]}})
         form = Form(FakePost({'blog': 'xyz'}))
-        self.assertFalse(Form(FakePost({'blog': 'xyz'})).validate())
+        self.assertFalse(form.validate())
+        self.assertEqual(form.errors, {'blog': ['Not a valid choice.']})
 
         form = Form(FakePost({'blog': 'xyzxyzxyzxyz'}))
-        self.assertFalse(Form(FakePost({'blog': 'xyz'})).validate())
+        self.assertFalse(form.validate())
+        self.assertEqual(form.errors, {'blog': [
+            'Not a valid choice.',
+            'Field cannot be longer than 10 characters.']})
 
 
 if __name__ == '__main__':

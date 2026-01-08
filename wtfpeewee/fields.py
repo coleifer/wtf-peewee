@@ -66,7 +66,7 @@ class BooleanSelectField(fields.SelectFieldBase):
             try:
                 self.data = bool(valuelist[0])
             except ValueError:
-                raise ValueError(self.gettext(u'Invalid Choice: could not coerce'))
+                raise ValueError(self.gettext('Invalid Choice: could not coerce.'))
 
 
 class WPJSONAreaField(fields.TextAreaField):
@@ -87,9 +87,9 @@ class WPJSONAreaField(fields.TextAreaField):
                 # subclass of ValueError with additional attributes
                 raise ValueError(self.gettext(('Not a valid JSON structure: '
                                                'parser error in line {e.lineno}, '
-                                               'column {e.colno}, char {e.pos}')).format(e=e))
+                                               'column {e.colno}, char {e.pos}.')).format(e=e))
             except AttributeError:
-                raise ValueError(self.gettext((u'Not a valid JSON structure')))
+                raise ValueError(self.gettext(('Not a valid JSON structure.')))
 
 
 class WPTimeField(StaticAttributesMixin, fields.StringField):
@@ -113,7 +113,7 @@ class WPTimeField(StaticAttributesMixin, fields.StringField):
         if valuelist:
             self.data = self.convert(' '.join(valuelist))
             if self.data is None:
-                raise ValueError(self.gettext(u'Not a valid time value'))
+                raise ValueError(self.gettext(u'Not a valid time value.'))
 
 
 class WPDateField(StaticAttributesMixin, fields.DateField):
@@ -219,7 +219,7 @@ class SelectChoicesField(fields.SelectField):
                 try:
                     self.data = self.coerce(valuelist[0])
                 except ValueError:
-                    raise ValueError(self.gettext(u'Invalid Choice: could not coerce'))
+                    raise ValueError(self.gettext('Invalid Choice: could not coerce.'))
 
     def pre_validate(self, form):
         if self.allow_blank and self.data is None:
@@ -311,7 +311,7 @@ class SelectQueryField(fields.SelectFieldBase):
                 value = self.data
 
             if not self.query.where(self.model._meta.primary_key == value).exists():
-                raise ValidationError(self.gettext('Not a valid choice'))
+                raise ValidationError(self.gettext('Not a valid choice.'))
 
         elif not self.allow_blank:
             raise ValidationError(self.gettext('Selection cannot be blank'))
@@ -358,7 +358,7 @@ class SelectMultipleQueryField(SelectQueryField):
         if self.data:
             id_list = [m._pk for m in self.data]
             if id_list and not self.query.where(self.model._meta.primary_key << id_list).count() == len(id_list):
-                raise ValidationError(self.gettext('Not a valid choice'))
+                raise ValidationError(self.gettext('Not a valid choice.'))
 
 
 class HiddenQueryField(fields.HiddenField):
