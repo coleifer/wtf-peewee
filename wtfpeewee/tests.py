@@ -18,15 +18,6 @@ from wtfpeewee.orm import model_form
 from wtfpeewee._compat import PY2
 
 
-if not PY2:
-    implements_to_string = lambda x: x
-else:
-    def implements_to_string(cls):
-        cls.__unicode__ = cls.__str__
-        cls.__str__ = lambda x: x.__unicode__().encode('utf-8')
-        return cls
-
-
 test_db = SqliteDatabase(':memory:')
 
 class TestModel(Model):
@@ -34,7 +25,6 @@ class TestModel(Model):
         database = test_db
 
 
-@implements_to_string
 class Blog(TestModel):
     title = CharField()
 
@@ -42,7 +32,6 @@ class Blog(TestModel):
         return self.title
 
 
-@implements_to_string
 class Entry(TestModel):
     pk = AutoField()
     blog = ForeignKeyField(Blog)
@@ -644,6 +633,18 @@ class WTFPeeweeTestCase(unittest.TestCase):
         self.assertTrue(isinstance(form.content, WPJSONAreaField))
         self.assertTrue(form.validate())
         self.assertEqual(form.content.data, teststruct)
+
+    def test_check_form_data(self):
+        class A(TestModel):
+            key = TextField()
+            value = TextField()
+
+        Form = model_form(A)
+        form = Form()
+        self.assertEqual(form.data, {'key': None, 'value': None})
+
+        form = Form(FakePost({'key': 'asdf'}))
+        self.assertEqual(form.data, {'key': 'asdf', 'value': None})
 
 
 if __name__ == '__main__':
