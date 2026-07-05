@@ -490,6 +490,54 @@ class WTFPeeweeTestCase(unittest.TestCase):
         self.assertEqual(frm.values.data, [a, b])
         self.assertTrue(frm.validate())
 
+    def test_boolean_select_field(self):
+        class TestForm(WTForm):
+            flag = BooleanSelectField()
+
+        for value, expected in (('1', True), ('true', True), ('x', True),
+                                ('', False), ('0', False), ('false', False)):
+            frm = TestForm(FakePost({'flag': value}))
+            self.assertEqual(frm.flag.data, expected)
+            self.assertTrue(frm.validate())
+
+    def assertQueryCount(self, expected, fn):
+        queries = []
+        execute_sql = test_db.execute_sql
+        def wrapper(sql, *args, **kwargs):
+            queries.append(sql)
+            return execute_sql(sql, *args, **kwargs)
+        test_db.execute_sql = wrapper
+        try:
+            fn()
+        finally:
+            test_db.execute_sql = execute_sql
+        self.assertEqual(len(queries), expected, '\n'.join(queries))
+
+    def test_select_query_field_validation_queries(self):
+        class TestForm(WTForm):
+            blog = SelectQueryField(query=Blog.select())
+
+        # Resolving the model instance and validating it is a single query.
+        frm = TestForm(FakePost({'blog': self.blog_b.id}))
+        self.assertQueryCount(1, lambda: self.assertTrue(frm.validate()))
+        self.assertEqual(frm.blog.data, self.blog_b)
+
+        # A missing object is also detected with a single query.
+        frm = TestForm(FakePost({'blog': 0}))
+        self.assertQueryCount(1, lambda: self.assertFalse(frm.validate()))
+
+        # Data assigned programmatically is still validated against the query.
+        frm = TestForm()
+        frm.blog.data = Blog(id=0, title='missing')
+        self.assertQueryCount(1, lambda: self.assertFalse(frm.validate()))
+
+        class TestMultiForm(WTForm):
+            blogs = SelectMultipleQueryField(query=Blog.select())
+
+        frm = TestMultiForm(FakePost({'blogs': [self.blog_a.id, self.blog_b.id]}))
+        self.assertQueryCount(1, lambda: self.assertTrue(frm.validate()))
+        self.assertEqual(frm.blogs.data, [self.blog_a, self.blog_b])
+
     def test_hidden_field(self):
         class TestEntryForm(WTForm):
             blog = HiddenQueryField(query=Blog.select())

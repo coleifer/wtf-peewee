@@ -52,23 +52,18 @@ else:
 
 class BooleanSelectField(fields.SelectFieldBase):
     widget = widgets.Select()
+    false_values = (False, 'false', '', '0')
 
     def iter_choices(self):
         yield wtf_choice('1', 'True', self.data)
         yield wtf_choice('', 'False', not self.data)
 
     def process_data(self, value):
-        try:
-            self.data = bool(value)
-        except (ValueError, TypeError):
-            self.data = None
+        self.data = bool(value)
 
     def process_formdata(self, valuelist):
         if valuelist:
-            try:
-                self.data = bool(valuelist[0])
-            except ValueError:
-                raise ValueError(self.gettext('Invalid Choice: could not coerce.'))
+            self.data = valuelist[0] not in self.false_values
 
 
 class WPJSONAreaField(fields.TextAreaField):
@@ -284,7 +279,10 @@ class SelectQueryField(fields.SelectFieldBase):
         if self._formdata is not None:
             model = self.get_model(self._formdata)
             if model is not None:
+                # Model was resolved using the field's query, so it is known
+                # to be a valid choice - pre_validate can skip re-checking.
                 self._set_data(model)
+                self._in_query = True
             else:
                 self._data = self._formdata
         return self._data
@@ -292,6 +290,7 @@ class SelectQueryField(fields.SelectFieldBase):
     def _set_data(self, data):
         self._data = data
         self._formdata = None
+        self._in_query = False
 
     data = property(_get_data, _set_data)
 
@@ -317,6 +316,9 @@ class SelectQueryField(fields.SelectFieldBase):
 
     def pre_validate(self, form):
         if self.data is not None:
+            if self._in_query:
+                return
+
             if isinstance(self.data, self.model):
                 value = self.data._pk
             else:
@@ -344,11 +346,13 @@ class SelectMultipleQueryField(SelectQueryField):
     def _get_data(self):
         if self._formdata is not None:
             self._set_data(self.get_model_list(self._formdata))
+            self._in_query = True
         return self._data or []
 
     def _set_data(self, data):
         self._data = data
         self._formdata = None
+        self._in_query = False
 
     data = property(_get_data, _set_data)
 
@@ -369,7 +373,7 @@ class SelectMultipleQueryField(SelectQueryField):
             self._formdata = list(valuelist)
 
     def pre_validate(self, form):
-        if self.data:
+        if self.data and not self._in_query:
             id_list = [m._pk for m in self.data]
             if id_list and not self.query.where(self.model._meta.primary_key << id_list).count() == len(id_list):
                 raise ValidationError(self.gettext('Not a valid choice.'))
