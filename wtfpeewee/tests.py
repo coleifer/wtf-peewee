@@ -1,4 +1,6 @@
+import base64
 import datetime
+import io
 import sys
 import unittest
 import json
@@ -76,6 +78,10 @@ class NonIntPKModel(TestModel):
     value = CharField()
 
 
+class BlobModel(TestModel):
+    body = BlobField()
+
+
 class PostgresJSONModel(TestModel):
     content = PostgresBinaryJSONField(null=True)
 
@@ -100,6 +106,7 @@ NullFieldsModelForm = model_form(NullFieldsModel)
 ChoicesForm = model_form(ChoicesModel, field_args={'salutation': {'choices': (('mr', 'Mr.'), ('mrs', 'Mrs.'))}})
 BlankChoicesForm = model_form(BlankChoices)
 NonIntPKForm = model_form(NonIntPKModel, allow_pk=True)
+BlobForm = model_form(BlobModel)
 PostgresJSONForm = model_form(PostgresJSONModel)
 SQLiteJSONForm = model_form(SQLiteJSONModel)
 if JSONField is not None:
@@ -756,6 +763,63 @@ class WTFPeeweeTestCase(unittest.TestCase):
         form = JSONForm(FakePost({'content': '{"str": "the answer", }'}))
         self.assertFalse(form.validate())
         self.assertEqual(form.content.data, None)
+
+    def test_blob_field(self):
+        payload = b'\x89PNG\r\n\x1a\n\x00binary\xff'
+
+        form = BlobForm()
+        self.assertTrue(isinstance(form.body, WPBlobField))
+
+        # Uploaded file-like objects are read into bytes.
+        form = BlobForm(FakePost({'body': io.BytesIO(payload)}))
+        self.assertTrue(form.validate())
+        obj = BlobModel()
+        form.populate_obj(obj)
+        self.assertEqual(obj.body, payload)
+
+        # Raw bytes are accepted as-is.
+        form = BlobForm(FakePost({'body': payload}))
+        self.assertTrue(form.validate())
+        self.assertEqual(form.body.data, payload)
+
+        # A plain string means the filename was submitted without multipart
+        # encoding - fail loudly rather than store the filename.
+        form = BlobForm(FakePost({'body': 'logo.png'}))
+        self.assertFalse(form.validate())
+
+        # No upload: validates, and populate_obj keeps the existing value.
+        obj = BlobModel(body=payload)
+        form = BlobForm(FakePost({}))
+        self.assertTrue(form.validate())
+        form.populate_obj(obj)
+        self.assertEqual(obj.body, payload)
+
+    def test_base64_field(self):
+        class TestForm(WTForm):
+            body = WPBase64Field()
+
+        payload = b'\x00\x01binary\xff'
+        encoded = base64.b64encode(payload).decode('ascii')
+
+        # Rendering encodes the binary data.
+        form = TestForm(body=payload)
+        self.assertEqual(
+            form.body(),
+            '<textarea id="body" name="body">\r\n%s</textarea>' % encoded)
+
+        # Submissions are decoded, tolerating whitespace/newlines.
+        form = TestForm(FakePost({'body': encoded[:4] + '\n' + encoded[4:]}))
+        self.assertTrue(form.validate())
+        self.assertEqual(form.body.data, payload)
+
+        # Invalid base64 is rejected.
+        form = TestForm(FakePost({'body': 'this is !not! base64'}))
+        self.assertFalse(form.validate())
+
+        # Empty means None.
+        form = TestForm(FakePost({'body': ''}))
+        self.assertTrue(form.validate())
+        self.assertEqual(form.body.data, None)
 
     @unittest.skipIf(AnyField is None, 'peewee lacks AnyField')
     def test_any_field(self):

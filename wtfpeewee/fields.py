@@ -2,6 +2,7 @@
 Useful form fields for use with the Peewee ORM.
 (cribbed from wtforms.ext.django.fields)
 """
+import base64
 import datetime
 import operator
 import json
@@ -22,7 +23,7 @@ __all__ = (
     'ModelSelectField', 'ModelSelectMultipleField', 'ModelHiddenField',
     'SelectQueryField', 'SelectMultipleQueryField', 'HiddenQueryField',
     'SelectChoicesField', 'BooleanSelectField', 'WPTimeField', 'WPDateField',
-    'WPDateTimeField', 'WPJSONAreaField',
+    'WPDateTimeField', 'WPJSONAreaField', 'WPBlobField', 'WPBase64Field',
 )
 
 
@@ -87,6 +88,55 @@ class WPJSONAreaField(fields.TextAreaField):
                                                'column {e.colno}, char {e.pos}.')).format(e=e))
             except AttributeError:
                 raise ValueError(self.gettext(('Not a valid JSON structure.')))
+
+
+class WPBlobField(fields.FileField):
+    """
+    File-upload field for binary blob data. The uploaded file is read into
+    bytes. When nothing is uploaded the existing value is left untouched,
+    so edit forms do not require re-uploading.
+    """
+    def process_formdata(self, valuelist):
+        if valuelist and valuelist[0]:
+            data = valuelist[0]
+            if hasattr(data, 'read'):
+                self.data = data.read()
+            elif isinstance(data, bytes):
+                self.data = data
+            else:
+                # A plain string is just the filename, indicating the form
+                # was submitted without enctype="multipart/form-data".
+                raise ValueError(self.gettext(
+                    'Did not receive file data - check that the form is '
+                    'submitted with enctype="multipart/form-data".'))
+
+    def populate_obj(self, obj, name):
+        if self.data:
+            setattr(obj, name, self.data)
+
+
+class WPBase64Field(fields.TextAreaField):
+    """
+    Textarea containing base64-encoded binary data - an alternative to
+    WPBlobField for editing binary data in plain (non-multipart) forms.
+    """
+    def _value(self):
+        if self.raw_data:
+            return self.raw_data[0]
+        elif self.data is not None:
+            return base64.b64encode(self.data).decode('ascii')
+        return ''
+
+    def process_formdata(self, valuelist):
+        if not valuelist or not valuelist[0].strip():
+            self.data = None
+            return
+
+        try:
+            self.data = base64.b64decode(''.join(valuelist[0].split()),
+                                         validate=True)
+        except ValueError:
+            raise ValueError(self.gettext('Not valid base64 data.'))
 
 
 class WPTimeField(StaticAttributesMixin, fields.StringField):

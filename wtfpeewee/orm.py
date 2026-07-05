@@ -10,6 +10,7 @@ from wtforms import fields as f
 from wtforms import validators
 from wtfpeewee.fields import ModelSelectField
 from wtfpeewee.fields import SelectChoicesField
+from wtfpeewee.fields import WPBlobField
 from wtfpeewee.fields import SelectQueryField
 from wtfpeewee.fields import WPDateField
 from wtfpeewee.fields import WPDateTimeField
@@ -94,7 +95,7 @@ class ModelConverter(object):
 
         # Base-classes.
         (BareField, f.StringField),
-        (BlobField, f.TextAreaField),
+        (BlobField, WPBlobField),
         (BooleanField, f.BooleanField),
         (CharField, f.StringField),
         (DateField, WPDateField),
@@ -162,11 +163,14 @@ class ModelConverter(object):
             # Treat empty string as None when converting.
             kwargs['filters'].append(handle_null_filter)
 
-        if (field.null or (field.default is not None)) or (
+        if (field.null or (field.default is not None) or
+                isinstance(field, BlobField)) or (
                 field.choices and any(not (v) for v, _ in field.choices)):
             # We allow the field to be optional if:
             # 1. the field is null=True and can be blank.
             # 2. the field has a default value.
+            # 3. the field is a file-upload, where an empty submission means
+            #    "keep the existing value" rather than "required".
             kwargs['validators'].append(validators.Optional())
         else:
             kwargs['validators'].append(ValueRequired())
