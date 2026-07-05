@@ -465,6 +465,31 @@ class WTFPeeweeTestCase(unittest.TestCase):
         frm = TestForm(FakePost({'blog': [self.blog_b.id, bad_id]}))
         self.assertTrue(frm.validate())
 
+    def test_form_multiple_non_int_pk(self):
+        a = NonIntPKModel.create(id='a', value='A')
+        b = NonIntPKModel.create(id='b', value='B')
+
+        class TestForm(WTForm):
+            values = SelectMultipleQueryField(
+                query=NonIntPKModel.select().order_by(NonIntPKModel.id),
+                get_label='value')
+
+        frm = TestForm()
+        self.assertChoices(frm.values, [
+            ('a', 'A', False),
+            ('b', 'B', False)])
+
+        frm = TestForm(FakePost({'values': ['b']}))
+        self.assertChoices(frm.values, [
+            ('a', 'A', False),
+            ('b', 'B', True)])
+        self.assertEqual(frm.values.data, [b])
+        self.assertTrue(frm.validate())
+
+        frm = TestForm(FakePost({'values': ['a', 'b']}))
+        self.assertEqual(frm.values.data, [a, b])
+        self.assertTrue(frm.validate())
+
     def test_hidden_field(self):
         class TestEntryForm(WTForm):
             blog = HiddenQueryField(query=Blog.select())

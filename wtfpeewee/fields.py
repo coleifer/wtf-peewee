@@ -364,7 +364,9 @@ class SelectMultipleQueryField(SelectQueryField):
     def process_formdata(self, valuelist):
         if valuelist:
             self._data = []
-            self._formdata = list(map(int, valuelist))
+            # Do not coerce the values here - the primary-key field will
+            # handle any conversions when the query is evaluated.
+            self._formdata = list(valuelist)
 
     def pre_validate(self, form):
         if self.data:
