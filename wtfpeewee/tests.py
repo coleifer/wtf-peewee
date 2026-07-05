@@ -13,6 +13,10 @@ try:
     from peewee import JSONField
 except ImportError:  # peewee < 4.0 has no core JSONField.
     JSONField = None
+try:
+    from peewee import AnyField
+except ImportError:
+    AnyField = None
 from wtforms import fields as wtfields
 from wtforms.form import Form as WTForm
 from wtforms.validators import Length, Regexp
@@ -85,6 +89,11 @@ if JSONField is not None:
         content = JSONField(null=True)
 
 
+if AnyField is not None:
+    class AnyModel(TestModel):
+        content = AnyField(null=True)
+
+
 BlogForm = model_form(Blog)
 EntryForm = model_form(Entry)
 NullFieldsModelForm = model_form(NullFieldsModel)
@@ -95,6 +104,8 @@ PostgresJSONForm = model_form(PostgresJSONModel)
 SQLiteJSONForm = model_form(SQLiteJSONModel)
 if JSONField is not None:
     JSONForm = model_form(JSONModel)
+if AnyField is not None:
+    AnyForm = model_form(AnyModel)
 
 class FakePost(dict):
     def getlist(self, key):
@@ -114,6 +125,8 @@ class WTFPeeweeTestCase(unittest.TestCase):
         SQLiteJSONModel.drop_table(True)
         if JSONField is not None:
             JSONModel.drop_table(True)
+        if AnyField is not None:
+            AnyModel.drop_table(True)
 
         Blog.create_table()
         Entry.create_table()
@@ -123,6 +136,8 @@ class WTFPeeweeTestCase(unittest.TestCase):
         SQLiteJSONModel.create_table()
         if JSONField is not None:
             JSONModel.create_table()
+        if AnyField is not None:
+            AnyModel.create_table()
 
         self.blog_a = Blog.create(title='a')
         self.blog_b = Blog.create(title='b')
@@ -741,6 +756,19 @@ class WTFPeeweeTestCase(unittest.TestCase):
         form = JSONForm(FakePost({'content': '{"str": "the answer", }'}))
         self.assertFalse(form.validate())
         self.assertEqual(form.content.data, None)
+
+    @unittest.skipIf(AnyField is None, 'peewee lacks AnyField')
+    def test_any_field(self):
+        form = AnyForm()
+        self.assertTrue(isinstance(form.content, wtfields.TextAreaField))
+
+        form = AnyForm(FakePost({'content': 'anything goes'}))
+        self.assertTrue(form.validate())
+        obj = AnyModel()
+        form.populate_obj(obj)
+        obj.save()
+        self.assertEqual(AnyModel.get(AnyModel.id == obj.id).content,
+                         'anything goes')
 
     def test_check_form_data(self):
         class A(TestModel):

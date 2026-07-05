@@ -44,6 +44,10 @@ try:
     from peewee import JSONField
 except ImportError:  # peewee < 4.0 has no core JSONField.
     JSONField = None
+try:
+    from peewee import AnyField
+except ImportError:
+    AnyField = None
 
 
 __all__ = (
@@ -107,6 +111,8 @@ class ModelConverter(object):
     ))
     if JSONField is not None:
         defaults[JSONField] = WPJSONAreaField
+    if AnyField is not None:
+        defaults[AnyField] = f.TextAreaField
     coerce_defaults = {
         BigIntegerField: int,
         CharField: str,
