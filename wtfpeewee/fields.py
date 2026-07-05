@@ -279,18 +279,22 @@ class SelectQueryField(fields.SelectFieldBase):
         if self._formdata is not None:
             model = self.get_model(self._formdata)
             if model is not None:
-                # Model was resolved using the field's query, so it is known
-                # to be a valid choice - pre_validate can skip re-checking.
                 self._set_data(model)
                 self._in_query = True
             else:
+                # Cache the miss so subsequent accesses do not re-query.
                 self._data = self._formdata
+                self._formdata = None
+                self._in_query = False
         return self._data
 
     def _set_data(self, data):
         self._data = data
         self._formdata = None
-        self._in_query = False
+        # Tri-state: True = resolved via the query (valid choice), False =
+        # looked-up via the query but missing (invalid), None = unknown, the
+        # data was assigned directly and pre_validate must check the query.
+        self._in_query = None
 
     data = property(_get_data, _set_data)
 
@@ -315,14 +319,17 @@ class SelectQueryField(fields.SelectFieldBase):
                 self._formdata = valuelist[0]
 
     def pre_validate(self, form):
-        if self.data is not None:
-            if self._in_query:
+        data = self.data
+        if data is not None:
+            if self._in_query is not None:
+                if not self._in_query:
+                    raise ValidationError(self.gettext('Not a valid choice.'))
                 return
 
-            if isinstance(self.data, self.model):
-                value = self.data._pk
+            if isinstance(data, self.model):
+                value = data._pk
             else:
-                value = self.data
+                value = data
 
             if not self.query.where(self.model._meta.primary_key == value).exists():
                 raise ValidationError(self.gettext('Not a valid choice.'))
