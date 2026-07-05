@@ -175,6 +175,10 @@ class ModelConverter(object):
         else:
             kwargs['validators'].append(ValueRequired())
 
+        if isinstance(field, CharField) and field.max_length:
+            kwargs['validators'].append(
+                validators.Length(max=field.max_length))
+
         if field.name in self.overrides:
             return FieldInfo(field.name, self.overrides[field.name](**kwargs))
 

@@ -178,11 +178,12 @@ class WTFPeeweeTestCase(unittest.TestCase):
                                        allow_pk=True,
                                        exclude=['value'])
 
+        # Regexp from field_args, ValueRequired, and Length from max_length.
         value_included_form = ValueIncludedForm()
-        self.assertEqual(len(value_included_form.id.validators), 2)
+        self.assertEqual(len(value_included_form.id.validators), 3)
 
         value_excluded_form = ValueExcludedForm()
-        self.assertEqual(len(value_excluded_form.id.validators), 2)
+        self.assertEqual(len(value_excluded_form.id.validators), 3)
 
     def test_non_int_pk(self):
         form = NonIntPKForm()
@@ -845,6 +846,19 @@ class WTFPeeweeTestCase(unittest.TestCase):
 
         form = Form(FakePost({'key': 'asdf'}))
         self.assertEqual(form.data, {'key': 'asdf', 'value': None})
+
+    def test_max_length(self):
+        class LengthModel(TestModel):
+            value = CharField(max_length=5)
+            unlimited = TextField()
+
+        Form = model_form(LengthModel)
+        form = Form(FakePost({'value': 'abcdef', 'unlimited': 'x' * 1000}))
+        self.assertFalse(form.validate())
+        self.assertEqual(list(form.errors), ['value'])
+
+        form = Form(FakePost({'value': 'abcde', 'unlimited': 'x' * 1000}))
+        self.assertTrue(form.validate())
 
     def test_optional_foreign_key(self):
         Form = model_form(NullEntry)
