@@ -40,6 +40,11 @@ from playhouse.postgres_ext import JSONField as PostgresJSONField
 from playhouse.postgres_ext import BinaryJSONField as PostgresBinaryJSONField
 from playhouse.sqlite_ext import JSONField as SQLiteJSONField
 
+try:
+    from peewee import JSONField
+except ImportError:  # peewee < 4.0 has no core JSONField.
+    JSONField = None
+
 
 __all__ = (
     'FieldInfo',
@@ -100,6 +105,8 @@ class ModelConverter(object):
         (PostgresJSONField, WPJSONAreaField),
         (PostgresBinaryJSONField, WPJSONAreaField),
     ))
+    if JSONField is not None:
+        defaults[JSONField] = WPJSONAreaField
     coerce_defaults = {
         BigIntegerField: int,
         CharField: str,

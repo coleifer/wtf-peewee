@@ -8,6 +8,11 @@ from peewee import *
 from playhouse.postgres_ext import BinaryJSONField as PostgresBinaryJSONField
 from playhouse.postgres_ext import JSONField as PostgresJSONField
 from playhouse.sqlite_ext import JSONField as SQLiteJSONField
+
+try:
+    from peewee import JSONField
+except ImportError:  # peewee < 4.0 has no core JSONField.
+    JSONField = None
 from wtforms import fields as wtfields
 from wtforms.form import Form as WTForm
 from wtforms.validators import Length, Regexp
@@ -75,6 +80,11 @@ class SQLiteJSONModel(TestModel):
     content = SQLiteJSONField(null=True)
 
 
+if JSONField is not None:
+    class JSONModel(TestModel):
+        content = JSONField(null=True)
+
+
 BlogForm = model_form(Blog)
 EntryForm = model_form(Entry)
 NullFieldsModelForm = model_form(NullFieldsModel)
@@ -83,6 +93,8 @@ BlankChoicesForm = model_form(BlankChoices)
 NonIntPKForm = model_form(NonIntPKModel, allow_pk=True)
 PostgresJSONForm = model_form(PostgresJSONModel)
 SQLiteJSONForm = model_form(SQLiteJSONModel)
+if JSONField is not None:
+    JSONForm = model_form(JSONModel)
 
 class FakePost(dict):
     def getlist(self, key):
@@ -100,6 +112,8 @@ class WTFPeeweeTestCase(unittest.TestCase):
         NullFieldsModel.drop_table(True)
         NonIntPKModel.drop_table(True)
         SQLiteJSONModel.drop_table(True)
+        if JSONField is not None:
+            JSONModel.drop_table(True)
 
         Blog.create_table()
         Entry.create_table()
@@ -107,6 +121,8 @@ class WTFPeeweeTestCase(unittest.TestCase):
         NullFieldsModel.create_table()
         NonIntPKModel.create_table()
         SQLiteJSONModel.create_table()
+        if JSONField is not None:
+            JSONModel.create_table()
 
         self.blog_a = Blog.create(title='a')
         self.blog_b = Blog.create(title='b')
@@ -700,6 +716,31 @@ class WTFPeeweeTestCase(unittest.TestCase):
         self.assertTrue(isinstance(form.content, WPJSONAreaField))
         self.assertTrue(form.validate())
         self.assertEqual(form.content.data, teststruct)
+
+    @unittest.skipIf(JSONField is None, 'peewee lacks core JSONField')
+    def test_core_json_field(self):
+        teststruct = {'arr': [2.7183, 3.1416, 42], 'str': 'the answer'}
+
+        entry = JSONModel.create(content=teststruct)
+        form = JSONForm(obj=entry)
+
+        self.assertTrue(isinstance(form.content, WPJSONAreaField))
+        self.assertTrue(form.validate())
+        self.assertEqual(form.content.data, teststruct)
+
+        # Round-trip a submission all the way to the database.
+        form = JSONForm(FakePost({'content': json.dumps(teststruct)}))
+        self.assertTrue(form.validate())
+        obj = JSONModel()
+        form.populate_obj(obj)
+        obj.save()
+        self.assertEqual(JSONModel.get(JSONModel.id == obj.id).content,
+                         teststruct)
+
+        # Invalid JSON is rejected.
+        form = JSONForm(FakePost({'content': '{"str": "the answer", }'}))
+        self.assertFalse(form.validate())
+        self.assertEqual(form.content.data, None)
 
     def test_check_form_data(self):
         class A(TestModel):
