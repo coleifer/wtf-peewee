@@ -5,7 +5,6 @@ Tools for generating forms based on Peewee models
 
 from collections import namedtuple
 from collections import OrderedDict
-from wtforms import __version__ as wtforms_version
 from wtforms import Form
 from wtforms import fields as f
 from wtforms import validators
@@ -59,10 +58,7 @@ class ValueRequired(object):
     truly blank values. See the implementation of DataRequired and
     InputRequired -- this class sits somewhere in the middle of them.
     """
-    if wtforms_version < '3.1.0':
-        field_flags = ('required',)
-    else:
-        field_flags = {'required': True}
+    field_flags = {'required': True}
 
     def __init__(self, message=None):
         self.message = message

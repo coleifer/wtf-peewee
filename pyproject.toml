@@ -7,7 +7,7 @@ name = "wtf-peewee"
 dynamic = ["version"]
 description = "wtforms integration for peewee"
 dependencies = [
-    "wtforms",
+    "wtforms>=3.0",
     "peewee>=3.0.0",
 ]
 readme = "README.md"

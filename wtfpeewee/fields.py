@@ -4,17 +4,9 @@ Useful form fields for use with the Peewee ORM.
 """
 import datetime
 import operator
-import warnings
 import json
 
-try:
-    from markupsafe import Markup
-except ImportError:
-    try:
-        from wtforms.widgets import HTMLString as Markup
-    except ImportError:
-        raise ImportError('Could not import markupsafe.Markup. Please install '
-                          'markupsafe.')
+from markupsafe import Markup
 from wtforms import __version__ as wtforms_version
 from wtforms import fields, form, widgets
 from wtforms.fields import FormField, _unset_value
@@ -105,6 +97,7 @@ class WPJSONAreaField(fields.TextAreaField):
 class WPTimeField(StaticAttributesMixin, fields.StringField):
     attributes = {'class': 'time-widget'}
     formats = ['%H:%M:%S', '%H:%M']
+    widget = widgets.TimeInput()
 
     def _value(self):
         if self.raw_data:
