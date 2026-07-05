@@ -15,7 +15,6 @@ from wtforms.validators import Length, Regexp
 from wtfpeewee.fields import *
 from wtfpeewee.fields import wtf_choice
 from wtfpeewee.orm import model_form
-from wtfpeewee._compat import PY2
 
 
 test_db = SqliteDatabase(':memory:')
@@ -292,8 +291,8 @@ class WTFPeeweeTestCase(unittest.TestCase):
 
         # check that the options look right
         self.assertChoices(form.blog, [
-            (self.blog_a._pk, u'a', False),
-            (self.blog_b._pk, u'b', False)])
+            (self.blog_a._pk, 'a', False),
+            (self.blog_b._pk, 'b', False)])
 
     def test_blog_form_with_obj(self):
         form = BlogForm(obj=self.blog_a)
@@ -312,8 +311,8 @@ class WTFPeeweeTestCase(unittest.TestCase):
 
         # check that the options look right
         self.assertChoices(form.blog, [
-            (self.blog_a._pk, u'a', True),
-            (self.blog_b._pk, u'b', False)])
+            (self.blog_a._pk, 'a', True),
+            (self.blog_b._pk, 'b', False)])
 
     def test_blog_form_saving(self):
         form = BlogForm(FakePost({'title': 'new blog'}))
@@ -485,7 +484,7 @@ class WTFPeeweeTestCase(unittest.TestCase):
 
         # check the htmlz for the form's hidden field
         html = form._fields['blog']()
-        self.assertEqual(html, u'<input id="blog" name="blog" type="hidden" value="%s">' % self.blog_b._pk)
+        self.assertEqual(html, '<input id="blog" name="blog" type="hidden" value="%s">' % self.blog_b._pk)
 
         self.assertTrue(form.validate())
         self.assertEqual(form.blog.data, self.blog_b)
@@ -513,7 +512,7 @@ class WTFPeeweeTestCase(unittest.TestCase):
 
         # check the htmlz for the form's hidden field
         html = form._fields['blog']()
-        self.assertEqual(html, u'<input id="blog" name="blog" type="hidden" value="%s">' % self.blog_b._pk)
+        self.assertEqual(html, '<input id="blog" name="blog" type="hidden" value="%s">' % self.blog_b._pk)
 
         self.assertTrue(form.validate())
 
@@ -538,7 +537,7 @@ class WTFPeeweeTestCase(unittest.TestCase):
 
         # check the htmlz for the form's hidden field
         html = form._fields['blog']()
-        self.assertEqual(html, u'<input id="blog" name="blog" type="hidden" value="">')
+        self.assertEqual(html, '<input id="blog" name="blog" type="hidden" value="">')
 
         self.assertTrue(form.validate())
         self.assertEqual(form.blog.data, None)
@@ -562,7 +561,7 @@ class WTFPeeweeTestCase(unittest.TestCase):
 
         # check the htmlz for the form's hidden field
         html = form._fields['blog']()
-        self.assertEqual(html, u'<input id="blog" name="blog" type="hidden" value="">')
+        self.assertEqual(html, '<input id="blog" name="blog" type="hidden" value="">')
 
         self.assertTrue(form.validate())
 

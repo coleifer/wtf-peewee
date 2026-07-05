@@ -19,7 +19,6 @@ from wtforms import __version__ as wtforms_version
 from wtforms import fields, form, widgets
 from wtforms.fields import FormField, _unset_value
 from wtforms.validators import ValidationError
-from wtfpeewee._compat import text_type, string_types
 
 __all__ = (
     'ModelSelectField', 'ModelSelectMultipleField', 'ModelHiddenField',
@@ -71,7 +70,7 @@ class BooleanSelectField(fields.SelectFieldBase):
 
 class WPJSONAreaField(fields.TextAreaField):
     def _value(self):
-        return json.dumps(self.data) if self.data is not None else u''
+        return json.dumps(self.data) if self.data is not None else ''
 
     def process_formdata(self, valuelist):
         # the empty string is not valid JSON, try setting to NULL
@@ -98,9 +97,9 @@ class WPTimeField(StaticAttributesMixin, fields.StringField):
 
     def _value(self):
         if self.raw_data:
-            return u' '.join(self.raw_data)
+            return ' '.join(self.raw_data)
         else:
-            return self.data and self.data.strftime(self.formats[0]) or u''
+            return self.data and self.data.strftime(self.formats[0]) or ''
 
     def convert(self, time_str):
         for format in self.formats:
@@ -113,7 +112,7 @@ class WPTimeField(StaticAttributesMixin, fields.StringField):
         if valuelist:
             self.data = self.convert(' '.join(valuelist))
             if self.data is None:
-                raise ValueError(self.gettext(u'Not a valid time value.'))
+                raise ValueError(self.gettext('Not a valid time value.'))
 
 
 class WPDateField(StaticAttributesMixin, fields.DateField):
@@ -127,7 +126,7 @@ def datetime_widget(field, **kwargs):
     html = []
     for subfield in field:
         html.append(subfield(**kwargs))
-    return Markup(u''.join(html))
+    return Markup(''.join(html))
 
 
 def generate_datetime_form(validators=None):
@@ -179,9 +178,9 @@ class ChosenSelectWidget(widgets.Select):
     """
     def __call__(self, field, **kwargs):
         if field.allow_blank and not self.multiple:
-            kwargs['data-role'] = u'chosenblank'
+            kwargs['data-role'] = 'chosenblank'
         else:
-            kwargs['data-role'] = u'chosen'
+            kwargs['data-role'] = 'chosen'
 
         return super(ChosenSelectWidget, self).__call__(field, **kwargs)
 
@@ -190,14 +189,14 @@ class SelectChoicesField(fields.SelectField):
     widget = ChosenSelectWidget()
 
     # all of this exists so i can get proper handling of None
-    def __init__(self, label=None, validators=None, coerce=text_type, choices=None, allow_blank=False, blank_text=u'', **kwargs):
+    def __init__(self, label=None, validators=None, coerce=str, choices=None, allow_blank=False, blank_text='', **kwargs):
         super(SelectChoicesField, self).__init__(label, validators, coerce, choices, **kwargs)
         self.allow_blank = allow_blank
         self.blank_text = blank_text or '----------------'
 
     def iter_choices(self):
         if self.allow_blank:
-            yield wtf_choice(u'__None', self.blank_text, self.data is None)
+            yield wtf_choice('__None', self.blank_text, self.data is None)
 
         for value, label in self.choices:
             yield wtf_choice(value, label, self.coerce(value) == self.data)
@@ -247,7 +246,7 @@ class SelectQueryField(fields.SelectFieldBase):
     """
     widget = ChosenSelectWidget()
 
-    def __init__(self, label=None, validators=None, query=None, get_label=None, allow_blank=False, blank_text=u'', **kwargs):
+    def __init__(self, label=None, validators=None, query=None, get_label=None, allow_blank=False, blank_text='', **kwargs):
         super(SelectQueryField, self).__init__(label, validators, **kwargs)
         self.allow_blank = allow_blank
         self.blank_text = blank_text or '----------------'
@@ -256,8 +255,8 @@ class SelectQueryField(fields.SelectFieldBase):
         self._set_data(None)
 
         if get_label is None:
-            self.get_label = lambda o: text_type(o)
-        elif isinstance(get_label, string_types):
+            self.get_label = lambda o: str(o)
+        elif isinstance(get_label, str):
             self.get_label = operator.attrgetter(get_label)
         else:
             self.get_label = get_label
@@ -290,7 +289,7 @@ class SelectQueryField(fields.SelectFieldBase):
 
     def iter_choices(self):
         if self.allow_blank:
-            yield wtf_choice(u'__None', self.blank_text, self.data is None)
+            yield wtf_choice('__None', self.blank_text, self.data is None)
 
         for obj in self.query.clone():
             yield wtf_choice(obj._pk, self.get_label(obj), obj == self.data)
@@ -370,8 +369,8 @@ class HiddenQueryField(fields.HiddenField):
         self._set_data(None)
 
         if get_label is None:
-            self.get_label = lambda o: text_type(o)
-        elif isinstance(get_label, basestring):
+            self.get_label = lambda o: str(o)
+        elif isinstance(get_label, str):
             self.get_label = operator.attrgetter(get_label)
         else:
             self.get_label = get_label

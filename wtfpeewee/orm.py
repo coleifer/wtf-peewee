@@ -16,7 +16,6 @@ from wtfpeewee.fields import WPDateField
 from wtfpeewee.fields import WPDateTimeField
 from wtfpeewee.fields import WPTimeField
 from wtfpeewee.fields import WPJSONAreaField
-from wtfpeewee._compat import text_type
 
 from peewee import BareField
 from peewee import BigIntegerField
@@ -69,7 +68,7 @@ class ValueRequired(object):
         self.message = message
 
     def __call__(self, form, field):
-        if field.data is None or isinstance(field.data, text_type) \
+        if field.data is None or isinstance(field.data, str) \
            and not field.data.strip():
             message = self.message or field.gettext('This field is required.')
             field.errors[:] = []
@@ -107,13 +106,13 @@ class ModelConverter(object):
     ))
     coerce_defaults = {
         BigIntegerField: int,
-        CharField: text_type,
+        CharField: str,
         DoubleField: float,
         FloatField: float,
         IntegerField: int,
         SmallIntegerField: int,
-        TextField: text_type,
-        UUIDField: text_type,
+        TextField: str,
+        UUIDField: str,
     }
 
     def __init__(self, additional=None, additional_coerce=None, overrides=None):
