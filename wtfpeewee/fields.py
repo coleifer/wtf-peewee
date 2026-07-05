@@ -20,6 +20,12 @@ from wtforms import fields, form, widgets
 from wtforms.fields import FormField, _unset_value
 from wtforms.validators import ValidationError
 
+try:
+    # wtforms >= 3.3
+    from wtforms.fields import Choice, SelectChoice
+except ImportError:
+    Choice = SelectChoice = None
+
 __all__ = (
     'ModelSelectField', 'ModelSelectMultipleField', 'ModelHiddenField',
     'SelectQueryField', 'SelectMultipleQueryField', 'HiddenQueryField',
@@ -39,7 +45,12 @@ class StaticAttributesMixin(object):
         return super(StaticAttributesMixin, self).__call__(**kwargs)
 
 
-if wtforms_version < '3.1.0':
+if Choice is not None:
+    # wtforms 3.3 deprecates yielding tuples from iter_choices(), and 4.0
+    # removes support entirely.
+    def wtf_choice(value, label, selected):
+        return Choice(value, label, selected, {})
+elif wtforms_version < '3.1.0':
     def wtf_choice(*args):
         return args
 else:
@@ -190,6 +201,10 @@ class SelectChoicesField(fields.SelectField):
 
     # all of this exists so i can get proper handling of None
     def __init__(self, label=None, validators=None, coerce=str, choices=None, allow_blank=False, blank_text='', **kwargs):
+        if SelectChoice is not None and choices is not None \
+           and not callable(choices) and not isinstance(choices, dict):
+            # wtforms 3.4 removes support for choices given as tuples.
+            choices = [SelectChoice.from_input(c) for c in choices]
         super(SelectChoicesField, self).__init__(label, validators, coerce, choices, **kwargs)
         self.allow_blank = allow_blank
         self.blank_text = blank_text or '----------------'
@@ -198,8 +213,13 @@ class SelectChoicesField(fields.SelectField):
         if self.allow_blank:
             yield wtf_choice('__None', self.blank_text, self.data is None)
 
-        for value, label in self.choices:
-            yield wtf_choice(value, label, self.coerce(value) == self.data)
+        if SelectChoice is not None:
+            for c in self._choices_from_input(self.choices) or []:
+                yield Choice(c.value, c.label,
+                             self.coerce(c.value) == self.data, c.render_kw)
+        else:
+            for value, label in self.choices:
+                yield wtf_choice(value, label, self.coerce(value) == self.data)
 
     def process_data(self, value):
         if value is None:
