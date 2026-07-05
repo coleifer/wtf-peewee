@@ -3,6 +3,8 @@ Tools for generating forms based on Peewee models
 (cribbed from wtforms.ext.django)
 """
 
+import uuid
+
 from collections import namedtuple
 from collections import OrderedDict
 from wtforms import Form
@@ -49,6 +51,10 @@ try:
     from peewee import AnyField
 except ImportError:
     AnyField = None
+try:
+    from peewee import BinaryUUIDField
+except ImportError:  # peewee < 3.11.
+    BinaryUUIDField = None
 
 
 __all__ = (
@@ -60,6 +66,15 @@ __all__ = (
 def handle_null_filter(data):
     if data == '':
         return None
+    return data
+
+def handle_uuid_filter(data):
+    # BinaryUUIDField requires a UUID instance (or bytes / 32-char hex).
+    if isinstance(data, str) and data:
+        try:
+            return uuid.UUID(data)
+        except ValueError:
+            raise ValueError('Invalid UUID.')
     return data
 
 class ValueRequired(object):
@@ -114,6 +129,11 @@ class ModelConverter(object):
         defaults[JSONField] = WPJSONAreaField
     if AnyField is not None:
         defaults[AnyField] = f.TextAreaField
+    if BinaryUUIDField is not None:
+        # Subclass of BlobField, so it must be checked before the BlobField
+        # base-class mapping.
+        defaults[BinaryUUIDField] = f.StringField
+        defaults.move_to_end(BinaryUUIDField, last=False)
     coerce_defaults = {
         BigIntegerField: int,
         CharField: str,
@@ -178,6 +198,14 @@ class ModelConverter(object):
         if isinstance(field, CharField) and field.max_length:
             kwargs['validators'].append(
                 validators.Length(max=field.max_length))
+
+        if isinstance(field, UUIDField):
+            kwargs['validators'].append(validators.UUID())
+        elif BinaryUUIDField is not None and \
+                isinstance(field, BinaryUUIDField):
+            kwargs['filters'].append(handle_uuid_filter)
+        elif isinstance(field, IPField):
+            kwargs['validators'].append(validators.IPAddress())
 
         if field.name in self.overrides:
             return FieldInfo(field.name, self.overrides[field.name](**kwargs))

@@ -3,6 +3,7 @@ import datetime
 import io
 import sys
 import unittest
+import uuid
 import json
 
 from markupsafe import escape
@@ -82,6 +83,18 @@ class BlobModel(TestModel):
     body = BlobField()
 
 
+class UUIDModel(TestModel):
+    key = UUIDField()
+
+
+class BinaryUUIDModel(TestModel):
+    key = BinaryUUIDField()
+
+
+class IPModel(TestModel):
+    address = IPField()
+
+
 class PostgresJSONModel(TestModel):
     content = PostgresBinaryJSONField(null=True)
 
@@ -130,6 +143,9 @@ class WTFPeeweeTestCase(unittest.TestCase):
         NullFieldsModel.drop_table(True)
         NonIntPKModel.drop_table(True)
         SQLiteJSONModel.drop_table(True)
+        UUIDModel.drop_table(True)
+        BinaryUUIDModel.drop_table(True)
+        IPModel.drop_table(True)
         if JSONField is not None:
             JSONModel.drop_table(True)
         if AnyField is not None:
@@ -141,6 +157,9 @@ class WTFPeeweeTestCase(unittest.TestCase):
         NullFieldsModel.create_table()
         NonIntPKModel.create_table()
         SQLiteJSONModel.create_table()
+        UUIDModel.create_table()
+        BinaryUUIDModel.create_table()
+        IPModel.create_table()
         if JSONField is not None:
             JSONModel.create_table()
         if AnyField is not None:
@@ -846,6 +865,45 @@ class WTFPeeweeTestCase(unittest.TestCase):
 
         form = Form(FakePost({'key': 'asdf'}))
         self.assertEqual(form.data, {'key': 'asdf', 'value': None})
+
+    def test_uuid_fields(self):
+        u = uuid.uuid4()
+        for model, form_field_type in ((UUIDModel, wtfields.StringField),
+                                       (BinaryUUIDModel, wtfields.StringField)):
+            Form = model_form(model)
+            form = Form()
+            self.assertTrue(isinstance(form.key, form_field_type))
+
+            # Valid UUID round-trips to the database.
+            form = Form(FakePost({'key': str(u)}))
+            self.assertTrue(form.validate())
+            obj = model()
+            form.populate_obj(obj)
+            obj.save()
+            self.assertEqual(model.get(model.id == obj.id).key, u)
+
+            # Rendering an existing value shows the hyphenated form.
+            form = Form(obj=model.get(model.id == obj.id))
+            self.assertTrue(str(u) in form.key())
+
+            # Garbage is rejected at validation, not at save.
+            form = Form(FakePost({'key': 'not-a-uuid'}))
+            self.assertFalse(form.validate())
+            self.assertEqual(form.errors, {'key': ['Invalid UUID.']})
+
+    def test_ip_field(self):
+        Form = model_form(IPModel)
+        form = Form(FakePost({'address': '10.1.2.3'}))
+        self.assertTrue(form.validate())
+        obj = IPModel()
+        form.populate_obj(obj)
+        obj.save()
+        self.assertEqual(IPModel.get(IPModel.id == obj.id).address,
+                         '10.1.2.3')
+
+        for garbage in ('999.1.2.3', 'banana', '1.2.3', ''):
+            form = Form(FakePost({'address': garbage}))
+            self.assertFalse(form.validate())
 
     def test_max_length(self):
         class LengthModel(TestModel):
