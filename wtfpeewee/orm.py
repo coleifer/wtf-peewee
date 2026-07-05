@@ -218,6 +218,11 @@ class ModelConverter(object):
         if hasattr(field, 'wtf_field'):
             return FieldInfo(field.name, field.wtf_field(model, **kwargs))
 
+        if isinstance(field, DecimalField):
+            # Display full precision rather than wtforms' default 2 places.
+            kwargs.setdefault('places', field.decimal_places)
+            kwargs.setdefault('rounding', field.rounding)
+
         for converter in self.converters:
             if isinstance(field, converter):
                 return self.converters[converter](model, field, **kwargs)

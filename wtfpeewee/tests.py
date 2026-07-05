@@ -5,6 +5,7 @@ import sys
 import unittest
 import uuid
 import json
+from decimal import Decimal
 
 from markupsafe import escape
 from peewee import *
@@ -904,6 +905,26 @@ class WTFPeeweeTestCase(unittest.TestCase):
         for garbage in ('999.1.2.3', 'banana', '1.2.3', ''):
             form = Form(FakePost({'address': garbage}))
             self.assertFalse(form.validate())
+
+    def test_decimal_places(self):
+        class DecimalModel(TestModel):
+            amount = DecimalField(max_digits=10, decimal_places=5)
+
+        Form = model_form(DecimalModel)
+
+        # Full precision is displayed, not wtforms' default of 2 places.
+        form = Form(amount=Decimal('3.14159'))
+        self.assertTrue('value="3.14159"' in form.amount())
+
+        form = Form(FakePost({'amount': '2.71828'}))
+        self.assertTrue(form.validate())
+        self.assertEqual(form.amount.data, Decimal('2.71828'))
+
+        # field_args can still override.
+        Form = model_form(DecimalModel,
+                          field_args={'amount': {'places': None}})
+        form = Form(amount=Decimal('3.14159'))
+        self.assertTrue('value="3.14159"' in form.amount())
 
     def test_max_length(self):
         class LengthModel(TestModel):
