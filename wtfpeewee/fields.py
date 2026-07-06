@@ -6,11 +6,13 @@ import base64
 import datetime
 import operator
 import json
+import re
 
 from markupsafe import Markup
 from wtforms import __version__ as wtforms_version
 from wtforms import fields, form, widgets
-from wtforms.fields import FormField, _unset_value
+from wtforms.fields import FormField
+from wtforms.utils import unset_value
 from wtforms.validators import ValidationError
 
 try:
@@ -43,7 +45,7 @@ if Choice is not None:
     # removes support entirely.
     def wtf_choice(value, label, selected):
         return Choice(value, label, selected, {})
-elif wtforms_version < '3.1.0':
+elif tuple(int(p) for p in re.findall(r'\d+', wtforms_version)[:2]) < (3, 1):
     def wtf_choice(*args):
         return args
 else:
@@ -193,16 +195,16 @@ class WPDateTimeField(FormField):
         super(WPDateTimeField, self).__init__(
             DynamicForm, label, validators=None, **kwargs)
 
-    def process(self, formdata, data=_unset_value, **_):
+    def process(self, formdata, data=unset_value, **_):
         prefix = self.name + self.separator
         kwargs = {}
-        if data is _unset_value:
+        if data is unset_value:
             try:
                 data = self.default()
             except TypeError:
                 data = self.default
 
-        if data and data is not _unset_value:
+        if data and data is not unset_value:
             kwargs['date'] = data.date()
             kwargs['time'] = data.time()
 
@@ -219,23 +221,8 @@ class WPDateTimeField(FormField):
             return datetime.datetime.combine(date_data, time_data)
 
 
-class ChosenSelectWidget(widgets.Select):
-    """
-        `Chosen <http://harvesthq.github.com/chosen/>`_ styled select widget.
-
-        You must include chosen.js for styling to work.
-    """
-    def __call__(self, field, **kwargs):
-        if field.allow_blank and not self.multiple:
-            kwargs['data-role'] = 'chosenblank'
-        else:
-            kwargs['data-role'] = 'chosen'
-
-        return super(ChosenSelectWidget, self).__call__(field, **kwargs)
-
-
 class SelectChoicesField(fields.SelectField):
-    widget = ChosenSelectWidget()
+    widget = widgets.Select()
 
     # all of this exists so i can get proper handling of None
     def __init__(self, label=None, validators=None, coerce=str, choices=None, allow_blank=False, blank_text='', **kwargs):
@@ -302,7 +289,7 @@ class SelectQueryField(fields.SelectFieldBase):
     being `None`.  The label for the blank choice can be set by specifying the
     `blank_text` parameter.
     """
-    widget = ChosenSelectWidget()
+    widget = widgets.Select()
 
     def __init__(self, label=None, validators=None, query=None, get_label=None, allow_blank=False, blank_text='', **kwargs):
         super(SelectQueryField, self).__init__(label, validators, **kwargs)
@@ -389,7 +376,7 @@ class SelectQueryField(fields.SelectFieldBase):
 
 
 class SelectMultipleQueryField(SelectQueryField):
-    widget =  ChosenSelectWidget(multiple=True)
+    widget = widgets.Select(multiple=True)
 
     def __init__(self, *args, **kwargs):
         kwargs.pop('allow_blank', None)
