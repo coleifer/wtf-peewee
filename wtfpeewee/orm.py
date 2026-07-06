@@ -55,6 +55,10 @@ try:
     from peewee import BinaryUUIDField
 except ImportError:  # peewee < 3.11.
     BinaryUUIDField = None
+try:
+    from peewee import BigBitField
+except ImportError:
+    BigBitField = None
 
 
 __all__ = (
@@ -134,6 +138,11 @@ class ModelConverter(object):
         # base-class mapping.
         defaults[BinaryUUIDField] = f.StringField
         defaults.move_to_end(BinaryUUIDField, last=False)
+    if BigBitField is not None:
+        # No sensible form representation for a bitmap - exclude it from
+        # generated forms. Also a BlobField subclass, so check it first.
+        defaults[BigBitField] = None
+        defaults.move_to_end(BigBitField, last=False)
     coerce_defaults = {
         BigIntegerField: int,
         CharField: str,
@@ -231,6 +240,10 @@ class ModelConverter(object):
                 if not isinstance(field, converter):
                     # Early-continue because it simplifies reading the following code.
                     continue
+                if self.defaults[converter] is None:
+                    # A "None" mapping indicates the field has no form
+                    # representation and should be skipped.
+                    return FieldInfo(field.name, None)
                 if issubclass(self.defaults[converter], f.FormField):
                     # FormField fields (i.e. for nested forms) do not support
                     # filters.
@@ -279,7 +292,8 @@ def model_fields(model, allow_pk=False, only=None, exclude=None,
             model,
             model_field,
             field_args.get(model_field.name))
-        field_dict[name] = field
+        if field is not None:
+            field_dict[name] = field
 
     return field_dict
 

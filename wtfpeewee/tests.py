@@ -906,6 +906,14 @@ class WTFPeeweeTestCase(unittest.TestCase):
             form = Form(FakePost({'address': garbage}))
             self.assertFalse(form.validate())
 
+    def test_big_bit_field_skipped(self):
+        class BitmapModel(TestModel):
+            name = CharField()
+            bitmap = BigBitField()
+
+        Form = model_form(BitmapModel)
+        self.assertEqual(sorted(Form()._fields), ['name'])
+
     def test_decimal_places(self):
         class DecimalModel(TestModel):
             amount = DecimalField(max_digits=10, decimal_places=5)
