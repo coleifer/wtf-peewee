@@ -24,6 +24,7 @@ from peewee import BigIntegerField
 from peewee import BlobField
 from peewee import BooleanField
 from peewee import CharField
+from peewee import CompositeKey
 from peewee import DateField
 from peewee import DateTimeField
 from peewee import DecimalField
@@ -279,7 +280,12 @@ def model_fields(model, allow_pk=False, only=None, exclude=None,
 
     model_fields = list(model._meta.sorted_fields)
     if not allow_pk:
-        model_fields.pop(0)
+        pk = model._meta.primary_key
+        if isinstance(pk, CompositeKey):
+            model_fields = [f for f in model_fields
+                            if f.name not in pk.field_names]
+        elif pk is not False and pk is not None:
+            model_fields = [f for f in model_fields if f is not pk]
 
     if only:
         model_fields = [x for x in model_fields if x.name in only]

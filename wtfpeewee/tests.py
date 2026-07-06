@@ -906,6 +906,34 @@ class WTFPeeweeTestCase(unittest.TestCase):
             form = Form(FakePost({'address': garbage}))
             self.assertFalse(form.validate())
 
+    def test_composite_key(self):
+        class CompositeModel(TestModel):
+            first = CharField()
+            second = CharField()
+            data = TextField()
+            class Meta:
+                primary_key = CompositeKey('first', 'second')
+
+        # All parts of the composite key are excluded, not just whichever
+        # field happens to sort first.
+        Form = model_form(CompositeModel)
+        self.assertEqual(sorted(Form()._fields), ['data'])
+
+        Form = model_form(CompositeModel, allow_pk=True)
+        self.assertEqual(sorted(Form()._fields),
+                         ['data', 'first', 'second'])
+
+    def test_no_primary_key(self):
+        class NoPKModel(TestModel):
+            key = CharField()
+            value = CharField()
+            class Meta:
+                primary_key = False
+
+        # No field is dropped when the model has no primary key.
+        Form = model_form(NoPKModel)
+        self.assertEqual(sorted(Form()._fields), ['key', 'value'])
+
     def test_big_bit_field_skipped(self):
         class BitmapModel(TestModel):
             name = CharField()
