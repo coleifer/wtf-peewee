@@ -26,6 +26,8 @@ from wtforms.form import Form as WTForm
 from wtforms.validators import Length, Regexp
 from wtfpeewee.fields import *
 from wtfpeewee.fields import wtf_choice
+from wtfpeewee.orm import FieldInfo
+from wtfpeewee.orm import ModelConverter
 from wtfpeewee.orm import model_form
 
 
@@ -233,6 +235,32 @@ class WTFPeeweeTestCase(unittest.TestCase):
         # The user filter plus handle_null_filter for the nullable column.
         self.assertEqual(len(FormA().c.filters), 2)
         self.assertEqual(len(FormB().c.filters), 2)
+
+    def test_converter_mro_resolution(self):
+        class SpecialFK(ForeignKeyField):
+            pass
+
+        class SpecialTextField(TextField):
+            pass
+
+        class SpecialModel(TestModel):
+            blog = SpecialFK(Blog)
+            content = SpecialTextField()
+
+        # Subclasses resolve through their MRO to the base-class mapping.
+        form = model_form(SpecialModel)()
+        self.assertTrue(isinstance(form.blog, ModelSelectField))
+        self.assertTrue(isinstance(form.content, wtfields.TextAreaField))
+
+        # A converter registered for a subclass beats the base-class
+        # ForeignKeyField handler.
+        def handle_special(model, field, **kwargs):
+            return FieldInfo(field.name, wtfields.IntegerField(**kwargs))
+
+        converter = ModelConverter(additional={SpecialFK: handle_special})
+        form = model_form(SpecialModel, converter=converter)()
+        self.assertTrue(isinstance(form.blog, wtfields.IntegerField))
+        self.assertTrue(isinstance(form.content, wtfields.TextAreaField))
 
     def test_non_int_pk(self):
         form = NonIntPKForm()

@@ -6,7 +6,6 @@ Tools for generating forms based on Peewee models
 import uuid
 
 from collections import namedtuple
-from collections import OrderedDict
 from wtforms import Form
 from wtforms import fields as f
 from wtforms import validators
@@ -103,47 +102,41 @@ class ValueRequired(object):
 FieldInfo = namedtuple('FieldInfo', ('name', 'field'))
 
 class ModelConverter(object):
-    defaults = OrderedDict((
-        # Subclasses of other fields.
-        (IPField, f.StringField),  # Subclass of BigIntegerField.
-        (TimestampField, WPDateTimeField),  # Subclass of BigIntegerField.
-        (AutoField, f.HiddenField),
-        (BigIntegerField, f.IntegerField),
-        (DoubleField, f.FloatField),
-        (SmallIntegerField, f.IntegerField),
-        (SQLiteJSONField, WPJSONAreaField),
-
-        # Base-classes.
-        (BareField, f.StringField),
-        (BlobField, WPBlobField),
-        (BooleanField, f.BooleanField),
-        (CharField, f.StringField),
-        (DateField, WPDateField),
-        (DateTimeField, WPDateTimeField),
-        (DecimalField, f.DecimalField),
-        (FloatField, f.FloatField),
-        (IntegerField, f.IntegerField),
-        (TextField, f.TextAreaField),
-        (TimeField, WPTimeField),
-        (UUIDField, f.StringField),
-
-        (PostgresJSONField, WPJSONAreaField),
-        (PostgresBinaryJSONField, WPJSONAreaField),
-    ))
+    # Resolved by walking the field class's MRO, so the most specific entry
+    # wins and declaration order does not matter.
+    defaults = {
+        AutoField: f.HiddenField,
+        BareField: f.StringField,
+        BigIntegerField: f.IntegerField,
+        BlobField: WPBlobField,
+        BooleanField: f.BooleanField,
+        CharField: f.StringField,
+        DateField: WPDateField,
+        DateTimeField: WPDateTimeField,
+        DecimalField: f.DecimalField,
+        DoubleField: f.FloatField,
+        FloatField: f.FloatField,
+        IntegerField: f.IntegerField,
+        IPField: f.StringField,
+        SmallIntegerField: f.IntegerField,
+        TextField: f.TextAreaField,
+        TimeField: WPTimeField,
+        TimestampField: WPDateTimeField,
+        UUIDField: f.StringField,
+        SQLiteJSONField: WPJSONAreaField,
+        PostgresJSONField: WPJSONAreaField,
+        PostgresBinaryJSONField: WPJSONAreaField,
+    }
     if JSONField is not None:
         defaults[JSONField] = WPJSONAreaField
     if AnyField is not None:
         defaults[AnyField] = f.TextAreaField
     if BinaryUUIDField is not None:
-        # Subclass of BlobField, so it must be checked before the BlobField
-        # base-class mapping.
         defaults[BinaryUUIDField] = f.StringField
-        defaults.move_to_end(BinaryUUIDField, last=False)
     if BigBitField is not None:
         # No sensible form representation for a bitmap - exclude it from
-        # generated forms. Also a BlobField subclass, so check it first.
+        # generated forms.
         defaults[BigBitField] = None
-        defaults.move_to_end(BigBitField, last=False)
     coerce_defaults = {
         BigIntegerField: int,
         CharField: str,
@@ -236,27 +229,27 @@ class ModelConverter(object):
             kwargs.setdefault('places', field.decimal_places)
             kwargs.setdefault('rounding', field.rounding)
 
-        for converter in self.converters:
-            if isinstance(field, converter):
-                return self.converters[converter](model, field, **kwargs)
+        for klass in type(field).__mro__:
+            if klass in self.converters:
+                return self.converters[klass](model, field, **kwargs)
 
-        for converter in self.defaults:
-            if not isinstance(field, converter):
-                # Early-continue because it simplifies reading the following code.
+        for klass in type(field).__mro__:
+            if klass not in self.defaults:
                 continue
-            if self.defaults[converter] is None:
+            field_class = self.defaults[klass]
+            if field_class is None:
                 # A "None" mapping indicates the field has no form
                 # representation and should be skipped.
                 return FieldInfo(field.name, None)
-            if issubclass(self.defaults[converter], f.FormField):
+            if issubclass(field_class, f.FormField):
                 # FormField fields (i.e. for nested forms) do not support
                 # filters.
                 kwargs.pop('filters')
             if field.choices or 'choices' in kwargs:
                 choices = kwargs.pop('choices', field.choices)
-                if converter in self.coerce_settings or 'coerce' in kwargs:
+                if klass in self.coerce_settings or 'coerce' in kwargs:
                     coerce_fn = kwargs.pop('coerce',
-                                           self.coerce_settings.get(converter))
+                                           self.coerce_settings.get(klass))
                     allow_blank = kwargs.pop('allow_blank', field.null)
                     kwargs.update({
                         'choices': choices,
@@ -265,7 +258,7 @@ class ModelConverter(object):
 
                     return FieldInfo(field.name, SelectChoicesField(**kwargs))
 
-            return FieldInfo(field.name, self.defaults[converter](**kwargs))
+            return FieldInfo(field.name, field_class(**kwargs))
 
         raise AttributeError("There is not possible conversion "
                              "for '%s'" % type(field))
