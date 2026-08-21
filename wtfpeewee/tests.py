@@ -654,6 +654,19 @@ class WTFPeeweeTestCase(unittest.TestCase):
         # pull from the db just to be 100% sure
         a1 = Entry.get(title='a1 edited')
 
+    def test_render_kwargs(self):
+        class TestForm(WTForm):
+            blog = ModelSelectField(model=Blog, render_kw={'data-x': 'y'})
+            blogs = ModelSelectMultipleField(model=Blog,
+                                             render_kw={'data-x': 'y'})
+            hidden = ModelHiddenField(model=Blog, render_kw={'data-x': 'y'})
+
+        form = TestForm()
+
+        # render_kw flows through the standard render path.
+        for field in (form.blog, form.blogs, form.hidden):
+            self.assertTrue('data-x="y"' in field())
+
     def test_hidden_field_none(self):
         class TestNullEntryForm(WTForm):
             blog = HiddenQueryField(query=Blog.select())

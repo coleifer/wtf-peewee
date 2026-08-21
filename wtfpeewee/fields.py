@@ -230,7 +230,8 @@ class SelectChoicesField(fields.SelectField):
            and not callable(choices) and not isinstance(choices, dict):
             # wtforms 3.4 removes support for choices given as tuples.
             choices = [SelectChoice.from_input(c) for c in choices]
-        super(SelectChoicesField, self).__init__(label, validators, coerce, choices, **kwargs)
+        super().__init__(label, validators, coerce=coerce, choices=choices,
+                         **kwargs)
         self.allow_blank = allow_blank
         self.blank_text = blank_text or '----------------'
 
@@ -335,11 +336,6 @@ class SelectQueryField(fields.SelectFieldBase):
 
     data = property(_get_data, _set_data)
 
-    def __call__(self, **kwargs):
-        if 'value' in kwargs:
-            self._set_data(self.get_model(kwargs['value']))
-        return self.widget(self, **kwargs)
-
     def iter_choices(self):
         if self.allow_blank:
             yield wtf_choice('__None', self.blank_text, self.data is None)
@@ -400,11 +396,6 @@ class SelectMultipleQueryField(SelectQueryField):
 
     data = property(_get_data, _set_data)
 
-    def __call__(self, **kwargs):
-        if 'value' in kwargs:
-            self._set_data(self.get_model_list(kwargs['value']))
-        return self.widget(self, **kwargs)
-
     def iter_choices(self):
         for obj in self.query.clone():
             yield wtf_choice(obj._pk, self.get_label(obj), obj in self.data)
@@ -426,7 +417,7 @@ class SelectMultipleQueryField(SelectQueryField):
 class HiddenQueryField(fields.HiddenField):
     def __init__(self, label=None, validators=None, query=None, get_label=None, **kwargs):
         self.allow_blank = kwargs.pop('allow_blank', False)
-        super(fields.HiddenField, self).__init__(label, validators, **kwargs)
+        super().__init__(label, validators, **kwargs)
         self.query = query
         self.model = query.model
         self._set_data(None)
@@ -457,11 +448,6 @@ class HiddenQueryField(fields.HiddenField):
         self._formdata = None
 
     data = property(_get_data, _set_data)
-
-    def __call__(self, **kwargs):
-        if 'value' in kwargs:
-            self._set_data(self.get_model(kwargs['value']))
-        return self.widget(self, **kwargs)
 
     def _value(self):
         return self.data and self.data._pk or ''
