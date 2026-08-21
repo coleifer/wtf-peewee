@@ -724,10 +724,9 @@ class WTFPeeweeTestCase(unittest.TestCase):
         self.assertTrue(form.validate())
         self.assertEqual(form.t.data, datetime.time(14, 30))
 
-        # The static class is prepended to a caller-supplied class attr,
-        # and raw data is re-echoed.
+        # Raw data is re-echoed, caller kwargs pass through.
         html = form.t(**{'class': 'c'})
-        self.assertTrue('class="time-widget c"' in html)
+        self.assertTrue('class="c"' in html)
         self.assertTrue('value="14:30"' in html)
 
         # Python data renders using the first (full) format.

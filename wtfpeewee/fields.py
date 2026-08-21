@@ -29,17 +29,6 @@ __all__ = (
 )
 
 
-class StaticAttributesMixin(object):
-    attributes = {}
-
-    def __call__(self, **kwargs):
-        for key, value in self.attributes.items():
-            if key in kwargs:
-                curr = kwargs[key]
-                kwargs[key] = '%s %s' % (value, curr)
-        return super(StaticAttributesMixin, self).__call__(**kwargs)
-
-
 if Choice is not None:
     # wtforms 3.3 deprecates yielding tuples from iter_choices(), and 4.0
     # removes support entirely.
@@ -141,22 +130,18 @@ class WPBase64Field(fields.TextAreaField):
             raise ValueError(self.gettext('Not valid base64 data.'))
 
 
-class WPTimeField(StaticAttributesMixin, fields.TimeField):
-    attributes = {'class': 'time-widget'}
-
+class WPTimeField(fields.TimeField):
     def __init__(self, label=None, validators=None, **kwargs):
         kwargs.setdefault('format', ['%H:%M:%S', '%H:%M'])
         super().__init__(label, validators, **kwargs)
 
 
-class WPDateField(StaticAttributesMixin, fields.DateField):
-    attributes = {'class': 'date-widget'}
+class WPDateField(fields.DateField):
+    pass
 
 
 def datetime_widget(field, **kwargs):
     kwargs.setdefault('id', field.id)
-    kwargs.setdefault('class', '')
-    kwargs['class'] += ' datetime-widget'
     html = []
     for subfield in field:
         html.append(subfield(**kwargs))
