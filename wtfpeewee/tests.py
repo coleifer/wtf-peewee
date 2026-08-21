@@ -711,6 +711,33 @@ class WTFPeeweeTestCase(unittest.TestCase):
         # pull from the db just to be 100% sure
         a1 = Entry.get(title='a1 edited')
 
+    def test_time_field(self):
+        class TestForm(WTForm):
+            t = WPTimeField()
+
+        # Both formats parse.
+        form = TestForm(FakePost({'t': '14:30:45'}))
+        self.assertTrue(form.validate())
+        self.assertEqual(form.t.data, datetime.time(14, 30, 45))
+
+        form = TestForm(FakePost({'t': '14:30'}))
+        self.assertTrue(form.validate())
+        self.assertEqual(form.t.data, datetime.time(14, 30))
+
+        # The static class is prepended to a caller-supplied class attr,
+        # and raw data is re-echoed.
+        html = form.t(**{'class': 'c'})
+        self.assertTrue('class="time-widget c"' in html)
+        self.assertTrue('value="14:30"' in html)
+
+        # Python data renders using the first (full) format.
+        form = TestForm(t=datetime.time(14, 30, 45))
+        self.assertTrue('value="14:30:45"' in form.t())
+
+        form = TestForm(FakePost({'t': 'xyz'}))
+        self.assertFalse(form.validate())
+        self.assertEqual(form.errors, {'t': ['Not a valid time value.']})
+
     def test_render_kwargs(self):
         class TestForm(WTForm):
             blog = ModelSelectField(model=Blog, render_kw={'data-x': 'y'})

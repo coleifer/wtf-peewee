@@ -141,29 +141,12 @@ class WPBase64Field(fields.TextAreaField):
             raise ValueError(self.gettext('Not valid base64 data.'))
 
 
-class WPTimeField(StaticAttributesMixin, fields.StringField):
+class WPTimeField(StaticAttributesMixin, fields.TimeField):
     attributes = {'class': 'time-widget'}
-    formats = ['%H:%M:%S', '%H:%M']
-    widget = widgets.TimeInput()
 
-    def _value(self):
-        if self.raw_data:
-            return ' '.join(self.raw_data)
-        else:
-            return self.data and self.data.strftime(self.formats[0]) or ''
-
-    def convert(self, time_str):
-        for format in self.formats:
-            try:
-                return datetime.datetime.strptime(time_str, format).time()
-            except ValueError:
-                pass
-
-    def process_formdata(self, valuelist):
-        if valuelist:
-            self.data = self.convert(' '.join(valuelist))
-            if self.data is None:
-                raise ValueError(self.gettext('Not a valid time value.'))
+    def __init__(self, label=None, validators=None, **kwargs):
+        kwargs.setdefault('format', ['%H:%M:%S', '%H:%M'])
+        super().__init__(label, validators, **kwargs)
 
 
 class WPDateField(StaticAttributesMixin, fields.DateField):
