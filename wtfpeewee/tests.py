@@ -185,6 +185,21 @@ class WTFPeeweeTestCase(unittest.TestCase):
         form = BlogFormDef(obj=self.blog_a)
         self.assertEqual(form.data, {'title': 'a'})
 
+    def test_select_choices_optgroup_blank(self):
+        try:
+            from wtforms.fields import SelectChoice
+        except ImportError:
+            self.skipTest('requires wtforms 3.3+')
+
+        class TestForm(WTForm):
+            x = SelectChoicesField(choices=[
+                SelectChoice('a', 'A', optgroup='g'),
+                SelectChoice('b', 'B', optgroup='g')], allow_blank=True)
+
+        html = TestForm().x()
+        self.assertTrue('__None' in html)
+        self.assertTrue('optgroup' in html)
+
     def test_duplicate_validators(self):
         ''' Test whether validators are duplicated when forms share field_args
         '''
@@ -204,6 +219,20 @@ class WTFPeeweeTestCase(unittest.TestCase):
 
         value_excluded_form = ValueExcludedForm()
         self.assertEqual(len(value_excluded_form.id.validators), 3)
+
+    def test_duplicate_filters(self):
+        ''' Test whether filters are duplicated when forms share field_args
+        '''
+        shared_field_args = {'c': {'filters': [lambda data: data]}}
+
+        FormA = model_form(NullFieldsModel, field_args=shared_field_args)
+        FormB = model_form(NullFieldsModel, field_args=shared_field_args)
+
+        self.assertEqual(len(shared_field_args['c']['filters']), 1)
+
+        # The user filter plus handle_null_filter for the nullable column.
+        self.assertEqual(len(FormA().c.filters), 2)
+        self.assertEqual(len(FormB().c.filters), 2)
 
     def test_non_int_pk(self):
         form = NonIntPKForm()
@@ -666,6 +695,41 @@ class WTFPeeweeTestCase(unittest.TestCase):
         # render_kw flows through the standard render path.
         for field in (form.blog, form.blogs, form.hidden):
             self.assertTrue('data-x="y"' in field())
+
+    def test_hidden_field_validation(self):
+        class TestEntryForm(WTForm):
+            blog = HiddenQueryField(query=Blog.select())
+
+        # A pk which does not resolve in the query is a validation error,
+        # and the submitted value is re-echoed when the form re-renders.
+        form = TestEntryForm(FakePost({'blog': 99999}))
+        self.assertFalse(form.validate())
+        self.assertEqual(form.errors, {'blog': ['Not a valid choice.']})
+        self.assertEqual(
+            form._fields['blog'](),
+            '<input id="blog" name="blog" type="hidden" value="99999">')
+
+        # Blank values pass by default, allow_blank=False rejects them.
+        class StrictEntryForm(WTForm):
+            blog = HiddenQueryField(query=Blog.select(), allow_blank=False)
+
+        form = StrictEntryForm(FakePost({'blog': ''}))
+        self.assertFalse(form.validate())
+
+        form = StrictEntryForm(FakePost({'blog': self.blog_a._pk}))
+        self.assertTrue(form.validate())
+        self.assertEqual(form.blog.data, self.blog_a)
+
+    def test_hidden_field_zero_pk(self):
+        zero = Blog.create(id=0, title='zero')
+
+        class TestForm(WTForm):
+            blog = HiddenQueryField(query=Blog.select())
+
+        form = TestForm(blog=zero)
+        self.assertEqual(
+            form.blog(),
+            '<input id="blog" name="blog" type="hidden" value="0">')
 
     def test_hidden_field_none(self):
         class TestNullEntryForm(WTForm):

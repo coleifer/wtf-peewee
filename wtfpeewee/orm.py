@@ -188,6 +188,9 @@ class ModelConverter(object):
         if kwargs['validators']:
             # Create a copy of the list since we will be modifying it.
             kwargs['validators'] = list(kwargs['validators'])
+        if kwargs['filters']:
+            # Copy for the same reason as validators.
+            kwargs['filters'] = list(kwargs['filters'])
 
         if field.null:
             # Treat empty string as None when converting.
@@ -236,33 +239,33 @@ class ModelConverter(object):
         for converter in self.converters:
             if isinstance(field, converter):
                 return self.converters[converter](model, field, **kwargs)
-        else:
-            for converter in self.defaults:
-                if not isinstance(field, converter):
-                    # Early-continue because it simplifies reading the following code.
-                    continue
-                if self.defaults[converter] is None:
-                    # A "None" mapping indicates the field has no form
-                    # representation and should be skipped.
-                    return FieldInfo(field.name, None)
-                if issubclass(self.defaults[converter], f.FormField):
-                    # FormField fields (i.e. for nested forms) do not support
-                    # filters.
-                    kwargs.pop('filters')
-                if field.choices or 'choices' in kwargs:
-                    choices = kwargs.pop('choices', field.choices)
-                    if converter in self.coerce_settings or 'coerce' in kwargs:
-                        coerce_fn = kwargs.pop('coerce',
-                                               self.coerce_settings[converter])
-                        allow_blank = kwargs.pop('allow_blank', field.null)
-                        kwargs.update({
-                            'choices': choices,
-                            'coerce': coerce_fn,
-                            'allow_blank': allow_blank})
 
-                        return FieldInfo(field.name, SelectChoicesField(**kwargs))
+        for converter in self.defaults:
+            if not isinstance(field, converter):
+                # Early-continue because it simplifies reading the following code.
+                continue
+            if self.defaults[converter] is None:
+                # A "None" mapping indicates the field has no form
+                # representation and should be skipped.
+                return FieldInfo(field.name, None)
+            if issubclass(self.defaults[converter], f.FormField):
+                # FormField fields (i.e. for nested forms) do not support
+                # filters.
+                kwargs.pop('filters')
+            if field.choices or 'choices' in kwargs:
+                choices = kwargs.pop('choices', field.choices)
+                if converter in self.coerce_settings or 'coerce' in kwargs:
+                    coerce_fn = kwargs.pop('coerce',
+                                           self.coerce_settings.get(converter))
+                    allow_blank = kwargs.pop('allow_blank', field.null)
+                    kwargs.update({
+                        'choices': choices,
+                        'coerce': coerce_fn,
+                        'allow_blank': allow_blank})
 
-                return FieldInfo(field.name, self.defaults[converter](**kwargs))
+                    return FieldInfo(field.name, SelectChoicesField(**kwargs))
+
+            return FieldInfo(field.name, self.defaults[converter](**kwargs))
 
         raise AttributeError("There is not possible conversion "
                              "for '%s'" % type(field))

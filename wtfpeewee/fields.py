@@ -58,8 +58,8 @@ class BooleanSelectField(fields.SelectFieldBase):
     false_values = (False, 'false', '', '0')
 
     def iter_choices(self):
-        yield wtf_choice('1', 'True', self.data)
-        yield wtf_choice('', 'False', not self.data)
+        yield wtf_choice('1', self.gettext('True'), self.data)
+        yield wtf_choice('', self.gettext('False'), not self.data)
 
     def process_data(self, value):
         self.data = bool(value)
@@ -247,6 +247,15 @@ class SelectChoicesField(fields.SelectField):
             for value, label in self.choices:
                 yield wtf_choice(value, label, self.coerce(value) == self.data)
 
+    def iter_groups(self):
+        # Keep the blank choice when optgroup'd choices route the widget
+        # through the grouped-render path.
+        if self.allow_blank:
+            yield None, [wtf_choice('__None', self.blank_text,
+                                    self.data is None)]
+        for group in super().iter_groups():
+            yield group
+
     def process_data(self, value):
         if value is None:
             self.data = None
@@ -410,53 +419,38 @@ class SelectMultipleQueryField(SelectQueryField):
     def pre_validate(self, form):
         if self.data and not self._in_query:
             id_list = [m._pk for m in self.data]
-            if id_list and not self.query.where(self.model._meta.primary_key << id_list).count() == len(id_list):
+            if id_list and self.query.where(self.model._meta.primary_key << id_list).count() != len(id_list):
                 raise ValidationError(self.gettext('Not a valid choice.'))
 
 
-class HiddenQueryField(fields.HiddenField):
-    def __init__(self, label=None, validators=None, query=None, get_label=None, **kwargs):
-        self.allow_blank = kwargs.pop('allow_blank', False)
-        super().__init__(label, validators, **kwargs)
-        self.query = query
-        self.model = query.model
-        self._set_data(None)
+class HiddenQueryField(SelectQueryField):
+    """
+    Like a SelectQueryField, but rendered as a hidden input. Blank values
+    are allowed by default - requiredness is left to the field's validators.
+    """
+    widget = widgets.HiddenInput()
 
-        if get_label is None:
-            self.get_label = lambda o: str(o)
-        elif isinstance(get_label, str):
-            self.get_label = operator.attrgetter(get_label)
-        else:
-            self.get_label = get_label
-
-    def get_model(self, pk):
-        try:
-            return self.query.where(self.model._meta.primary_key==pk).get()
-        except self.model.DoesNotExist:
-            pass
-
-    def _get_data(self):
-        if self._formdata is not None:
-            if self.allow_blank and self._formdata == '__None':
-                self._set_data(None)
-            else:
-                self._set_data(self.get_model(self._formdata))
-        return self._data
-
-    def _set_data(self, data):
-        self._data = data
-        self._formdata = None
-
-    data = property(_get_data, _set_data)
+    def __init__(self, label=None, validators=None, query=None,
+                 get_label=None, allow_blank=True, **kwargs):
+        super().__init__(label, validators, query=query, get_label=get_label,
+                         allow_blank=allow_blank, **kwargs)
 
     def _value(self):
-        return self.data and self.data._pk or ''
+        if self.data is None:
+            return ''
+        elif isinstance(self.data, self.model):
+            return self.data._pk
+        # An unresolvable pk - re-echo the submitted value.
+        return self.data
 
     def process_formdata(self, valuelist):
         if valuelist:
             model_id = valuelist[0]
-            self._data = None
-            self._formdata = model_id or None
+            if not model_id or model_id == '__None':
+                self.data = None
+            else:
+                self._data = None
+                self._formdata = model_id
 
 
 class ModelSelectField(SelectQueryField):
