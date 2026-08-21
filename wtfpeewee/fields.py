@@ -163,20 +163,25 @@ class WPDateTimeField(FormField):
         super(WPDateTimeField, self).__init__(
             DynamicForm, label, validators=None, **kwargs)
 
-    def process(self, formdata, data=unset_value, **_):
-        prefix = self.name + self.separator
-        kwargs = {}
+    def process(self, formdata, data=unset_value, extra_filters=None):
+        # Resolve the default here - a datetime default must be split into
+        # the date/time dict before FormField builds the inner form.
         if data is unset_value:
             try:
                 data = self.default()
             except TypeError:
                 data = self.default
+            self._obj = data
 
-        if data and data is not unset_value:
-            kwargs['date'] = data.date()
-            kwargs['time'] = data.time()
+        original = data
+        if isinstance(data, datetime.datetime):
+            data = {'date': data.date(), 'time': data.time()}
 
-        self.form = self.form_class(formdata, prefix=prefix, **kwargs)
+        super().process(formdata, data, extra_filters=extra_filters)
+
+        # The dict handed to FormField is an implementation detail - the
+        # field's starting value is the datetime.
+        self.object_data = original
 
     def populate_obj(self, obj, name):
         setattr(obj, name, self.data)

@@ -737,6 +737,34 @@ class WTFPeeweeTestCase(unittest.TestCase):
         self.assertFalse(form.validate())
         self.assertEqual(form.errors, {'t': ['Not a valid time value.']})
 
+    def test_datetime_field_process(self):
+        # object_data holds the original datetime, not the internal dict.
+        form = EntryForm(obj=self.entry_a1)
+        self.assertEqual(form.pub_date.object_data,
+                         datetime.datetime(2011, 1, 1))
+
+        # FormField-based fields reject extra filters loudly.
+        self.assertRaises(TypeError, EntryForm,
+                          extra_filters={'pub_date': [lambda data: data]})
+
+    def test_datetime_post_process_single_call(self):
+        if not hasattr(wtfields.Field, 'post_process'):
+            self.skipTest('requires wtforms 3.3+')
+
+        calls = []
+        orig = wtfields.Field.post_process
+        def counting(field, formdata=None):
+            calls.append(field.name)
+            return orig(field, formdata)
+        wtfields.Field.post_process = counting
+        try:
+            EntryForm()
+        finally:
+            wtfields.Field.post_process = orig
+
+        dupes = sorted(set(n for n in calls if calls.count(n) > 1))
+        self.assertEqual(dupes, [])
+
     def test_render_kwargs(self):
         class TestForm(WTForm):
             blog = ModelSelectField(model=Blog, render_kw={'data-x': 'y'})
