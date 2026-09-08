@@ -176,7 +176,7 @@ class ModelConverter(object):
 
     def handle_enum(self, model, field, **kwargs):
         enum_class = field.enum_class
-        base_coerce = field.enum_value_type or str
+        base_coerce = getattr(field, 'enum_value_type', None) or str
 
         def coerce(value):
             # Form data arrives as text - cast to the storage type first.
