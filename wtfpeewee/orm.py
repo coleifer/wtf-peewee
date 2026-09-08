@@ -59,6 +59,10 @@ try:
     from peewee import BigBitField
 except ImportError:
     BigBitField = None
+try:
+    from playhouse.fields import EnumFieldMixin
+except ImportError:  # peewee < 4.5.
+    EnumFieldMixin = None
 
 
 __all__ = (
@@ -150,6 +154,8 @@ class ModelConverter(object):
 
     def __init__(self, additional=None, additional_coerce=None, overrides=None):
         self.converters = {ForeignKeyField: self.handle_foreign_key}
+        if EnumFieldMixin is not None:
+            self.converters[EnumFieldMixin] = self.handle_enum
         if additional:
             self.converters.update(additional)
 
@@ -167,6 +173,21 @@ class ModelConverter(object):
         else:
             field_obj = ModelSelectField(model=field.rel_model, **kwargs)
         return FieldInfo(field.name, field_obj)
+
+    def handle_enum(self, model, field, **kwargs):
+        enum_class = field.enum_class
+        base_coerce = field.enum_value_type or str
+
+        def coerce(value):
+            # Form data arrives as text - cast to the storage type first.
+            if isinstance(value, enum_class):
+                return value
+            return enum_class(base_coerce(value))
+
+        kwargs.setdefault('choices', [(m.value, m.name) for m in enum_class])
+        kwargs.setdefault('coerce', coerce)
+        kwargs.setdefault('allow_blank', field.null)
+        return FieldInfo(field.name, SelectChoicesField(**kwargs))
 
     def convert(self, model, field, field_args):
         kwargs = {
@@ -201,7 +222,9 @@ class ModelConverter(object):
         else:
             kwargs['validators'].append(ValueRequired())
 
-        if isinstance(field, CharField) and field.max_length:
+        if isinstance(field, CharField) and field.max_length and \
+           getattr(field, 'enum_class', None) is None:
+            # Enum data is a member, not a string, and the choices are fixed.
             kwargs['validators'].append(
                 validators.Length(max=field.max_length))
 

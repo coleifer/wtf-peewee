@@ -1,5 +1,6 @@
 import base64
 import datetime
+import enum
 import io
 import sys
 import unittest
@@ -21,6 +22,11 @@ try:
     from peewee import AnyField
 except ImportError:
     AnyField = None
+try:
+    from playhouse.fields import EnumField
+    from playhouse.fields import IntEnumField
+except ImportError:  # peewee < 4.5.
+    EnumField = None
 from wtforms import fields as wtfields
 from wtforms.form import Form as WTForm
 from wtforms.validators import Length, Regexp
@@ -116,6 +122,20 @@ if AnyField is not None:
         content = AnyField(null=True)
 
 
+if EnumField is not None:
+    class Shade(enum.Enum):
+        LIGHT = 'light'
+        DARK = 'dark'
+
+    class Prio(enum.IntEnum):
+        LOW = 1
+        HIGH = 9
+
+    class EnumModel(TestModel):
+        shade = EnumField(Shade, default=Shade.LIGHT)
+        prio = IntEnumField(Prio, null=True)
+
+
 BlogForm = model_form(Blog)
 EntryForm = model_form(Entry)
 NullFieldsModelForm = model_form(NullFieldsModel)
@@ -129,6 +149,8 @@ if JSONField is not None:
     JSONForm = model_form(JSONModel)
 if AnyField is not None:
     AnyForm = model_form(AnyModel)
+if EnumField is not None:
+    EnumForm = model_form(EnumModel)
 
 class FakePost(dict):
     def getlist(self, key):
@@ -153,6 +175,8 @@ class WTFPeeweeTestCase(unittest.TestCase):
             JSONModel.drop_table(True)
         if AnyField is not None:
             AnyModel.drop_table(True)
+        if EnumField is not None:
+            EnumModel.drop_table(True)
 
         Blog.create_table()
         Entry.create_table()
@@ -167,6 +191,8 @@ class WTFPeeweeTestCase(unittest.TestCase):
             JSONModel.create_table()
         if AnyField is not None:
             AnyModel.create_table()
+        if EnumField is not None:
+            EnumModel.create_table()
 
         self.blog_a = Blog.create(title='a')
         self.blog_b = Blog.create(title='b')
@@ -348,6 +374,50 @@ class WTFPeeweeTestCase(unittest.TestCase):
         self.assertEqual(form.status.data, None)
         self.assertFalse(form.validate())
         self.assertTrue(list(form.errors), ['gender'])
+
+    def test_enum_field(self):
+        if EnumField is None:
+            raise unittest.SkipTest('requires playhouse EnumField')
+
+        form = EnumForm()
+        self.assertTrue(isinstance(form.shade, SelectChoicesField))
+        self.assertTrue(isinstance(form.prio, SelectChoicesField))
+        self.assertTrue(form.shade.data is Shade.LIGHT)
+        self.assertChoices(form.shade, [
+            ('light', 'LIGHT', True),
+            ('dark', 'DARK', False)])
+        self.assertChoices(form.prio, [
+            ('__None', '----------------', True),
+            (1, 'LOW', False),
+            (9, 'HIGH', False)])
+
+        form = EnumForm(FakePost({'shade': 'dark', 'prio': '9'}))
+        self.assertTrue(form.validate())
+        self.assertTrue(form.shade.data is Shade.DARK)
+        self.assertTrue(form.prio.data is Prio.HIGH)
+        obj = EnumModel()
+        form.populate_obj(obj)
+        obj.save()
+        obj_db = EnumModel.get()
+        self.assertTrue(obj_db.shade is Shade.DARK)
+        self.assertTrue(obj_db.prio is Prio.HIGH)
+
+        # Nullable enum accepts blank.
+        form = EnumForm(FakePost({'shade': 'light', 'prio': '__None'}))
+        self.assertTrue(form.validate())
+        self.assertTrue(form.prio.data is None)
+
+        # Unknown value is rejected at the form.
+        form = EnumForm(FakePost({'shade': 'mauve', 'prio': '1'}))
+        self.assertFalse(form.validate())
+        self.assertEqual(form.errors,
+                         {'shade': ['Invalid Choice: could not coerce.']})
+
+        # Edit forms preselect the stored member.
+        form = EnumForm(obj=obj_db)
+        self.assertChoices(form.shade, [
+            ('light', 'LIGHT', False),
+            ('dark', 'DARK', True)])
 
     def test_blank_choices(self):
         obj = BlankChoices(status=None)
